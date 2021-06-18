@@ -1,0 +1,110 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+library(tidyverse)
+```
+
+
+
+```{r}
+sim <- t(replicate(1e5, {
+  n <- 3
+  group1 <- rpois(n = n, lambda = 4)
+  group2 <- rpois(n = n, lambda = 16)
+  group3 <- rpois(n = n, lambda = 64)
+  
+  conf <- rnorm(n * 3)
+  
+  dat <-tibble(value = c(group1, group2, group3),
+               group = as.factor(rep(1:3, each = n)))
+  
+  lm_fit <- glm(value ~ group + conf - 1, dat, family = gaussian(link = "identity"))
+  log_lm_fit <- glm(value ~ group + conf - 1, dat, family = poisson(link = "log"))
+  
+  c(coef(lm_fit)[-4], coef(log_lm_fit)[-4],
+    summary(multcomp::glht(lm_fit, c("group1 - group2 == 0")), test = multcomp::Ftest())$test$pvalue,
+    summary(multcomp::glht(log_lm_fit, c("group1 - group2 == 0")), test = multcomp::Ftest())$test$pvalue)  
+}))
+
+g1_g2_lognorm <- sim[,5] - sim[,4]
+g1_g2_norm <- log(sim[,2] / sim[,1])
+g2_g3_lognorm <- sim[,6] - sim[,5]
+g2_g3_norm <- log(sim[,3] / sim[,2])
+```
+
+
+```{r}
+hist(g1_g2_lognorm, breaks = c(-Inf, seq(-2, 4, l=50), Inf), xlim = c(-2, 4))
+hist(g1_g2_norm, breaks = c(-Inf, seq(-2, 4, l=50), Inf), add = TRUE, col = "#FF000088")
+
+hist(g2_g3_lognorm, breaks = c(-Inf, seq(-2, 4, l=50), Inf), xlim = c(-2, 4))
+hist(g2_g3_norm, breaks = c(-Inf, seq(-2, 4, l=50), Inf), add = TRUE, col = "#FF000088")
+
+
+sd(g1_g2_lognorm, na.rm = TRUE)
+sd(g1_g2_norm, na.rm = TRUE)
+sd(g2_g3_lognorm, na.rm = TRUE)
+sd(g2_g3_norm, na.rm = TRUE)
+
+mean(sim[,7] > sim[,8])
+```
+
+
+
+```{r}
+tibble(g1g2_lognorm = g1_g2_lognorm, g1g2_norm = g1_g2_norm,
+       g2g3_lognorm = g2_g3_lognorm, g2g3_norm = g2_g3_norm) %>%
+  pivot_longer(everything(), names_sep = "_", names_to = c("contrast", "inference")) %>%
+  mutate(value = value / log(2)) %>%
+  drop_na() %>%
+  group_by(contrast, inference) %>%
+  summarize(density = dplyr::rename(as_tibble(density(value, from = -0.8, to = 4.8)[c("x", "y")]), lfc = x, dens = y)) %>%
+  unpack(density) %>%
+  ungroup() %>%
+  mutate(contr_num = as.numeric(as.factor(contrast))) %>%
+  ggplot(aes(x = contr_num, y = lfc)) +
+    geom_path(data = . %>% filter(inference == "lognorm"), 
+              aes(x = contr_num + dens / 4, group = paste0(inference, contrast)),
+              size = 2) +
+    geom_path(data = . %>% filter(inference == "norm"), 
+              aes(x = contr_num + dens / 4, group = paste0(inference, contrast)),
+              size = 0.8, linetype = "dashed", color = "red") +
+    # geom_path(aes(x = contr_num + dens / 4, color = inference, group = paste0(inference, contrast))) +
+    geom_hline(yintercept = 2) +
+    coord_cartesian(ylim = c(-1, 5), xlim = c(0.6, 2.4)) +
+    scale_x_continuous(breaks = numeric(0)) +
+    guides(fill = FALSE) +
+    labs(x = "", y = expression(log[2]~Fold~Change~Estimate)) +
+    cowplot::theme_cowplot()
+
+cowplot::save_plot("../output/heteroskedasticity/log_fold_change.pdf", last_plot())
+```
+
+
+```{r}
+tibble(group1 = rpois(n = 1e5, lambda = 4),
+       group2 = rpois(n = 1e5, lambda = 16),
+       group3 = rpois(n = 1e5, lambda = 64)) %>%
+  pivot_longer(everything()) %>%
+  ggplot(aes(x = value, fill = name))+
+    geom_histogram(position = "identity", alpha = 0.8, breaks = seq(-1, 101) + 0.5) +
+    geom_vline(xintercept = c(4, 16, 64)) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.05))) +
+    scale_x_continuous(expand = expansion(mult = c(0, 0.05))) +
+    guides(fill = FALSE) +
+    labs(x = "", y = "") +
+    cowplot::theme_cowplot()
+
+cowplot::save_plot("../output/heteroskedasticity/hists.pdf", last_plot())
+```
+
+
+
+
+The actual figure was arranged using Illustrator.
+
+

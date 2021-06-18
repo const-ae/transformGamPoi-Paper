@@ -1,0 +1,57 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+
+```{r}
+library(tidyverse)
+library(tidylog)
+```
+
+```{r}
+theme_set(cowplot::theme_cowplot())
+```
+
+
+```{r, fig.width=5, fig.height=3}
+sqrt_pos <- 17
+acosh_pos <- 16
+log_pos <- 15
+
+alpha <- 0.1
+
+tibble(x = seq(0, 40, l = 1001)) %>%
+  mutate(sqrt = 2 * sqrt(alpha * x),
+         log = log(x + 1/(4*alpha)) + log(4 * alpha),
+         acosh = acosh(2 * alpha * x + 1)) %>%
+  ggplot(aes(x = x)) +
+    geom_line(aes(y = sqrt), color = "#016FB9", size = 2) +
+    geom_point(data = . %>% filter(x %% 1 == 0), aes(y = sqrt), color = "#016FB9", size = 2) +
+    geom_line(aes(y = acosh), color = "#353531", size = 2) +
+    geom_point(data = . %>% filter(x %% 1 == 0), aes(y = acosh), color = "#353531", size = 2) +
+    geom_line(aes(y = log), color = "#EC4E20", size = 2) +
+    geom_point(data = . %>% filter(x %% 1 == 0), aes(y = log), color = "#EC4E20", size = 2) +
+    annotate(geom = "text", x = sqrt_pos + 0.2, y = 2 * sqrt(alpha * sqrt_pos), label = expression(s~sqrt(y)),
+             hjust = 0, vjust = -0.4, size = 5, angle = 20) +
+    annotate(geom = "text", x = acosh_pos, y = acosh(2 * alpha * acosh_pos + 1), label = expression(acosh(2~alpha~y+1)),
+             hjust = 0, vjust = -0.2, size = 5, angle = 10) +
+    annotate(geom = "text", x = log_pos, y = log(4  * alpha * log_pos + 1), label = expression(log(y+1/(4*alpha))+a),
+             hjust = 0, vjust = 1.2, size = 5, angle = 8) +
+    annotate(geom = "text", x = 28, y = 0.15, hjust = 1, vjust = 0, label = "y", size = 4, color = "darkgrey") +  
+    annotate(geom = "text", x = 0.3, y = 3.7, hjust = 0, vjust = 1, label = "g(y)", size = 4, color = "darkgrey") +  
+    coord_cartesian(ylim = c(0, 3.4), xlim = c(0, 28), clip = "off") +
+    scale_y_continuous(expand = expansion(add = c(0, 0.3))) +
+    scale_x_continuous(expand = expansion(0)) +
+    theme(axis.title.x = element_blank(),
+          axis.title.y = element_blank())
+    # labs(y = "", x = "")
+
+cowplot::save_plot("../output/graph_of_vsts.pdf", last_plot(), base_height = 3)
+```
+
+
+
+
+

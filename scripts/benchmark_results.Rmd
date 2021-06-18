@@ -1,0 +1,276 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r load_libraries}
+library(tidyverse)
+library(tidylog, warn.conflicts = FALSE)
+theme_set(cowplot::theme_cowplot())
+```
+
+```{r}
+methods_of_interest <- factor(c("logp1", "logp_alpha", "acosh", "pearson", "rand_quantile", 
+                                "pca_logp1", "pca_logp_alpha", "pca_acosh", "pca_pearson", "pca_rand_quantile", "sanity_dists"))
+```
+
+
+```{r load_data}
+res <- read_tsv("../data/benchmark_results.tsv") %>%
+  mutate(method = factor(method, levels = methods_of_interest)) 
+res
+```
+
+
+
+```{r method_annotation}
+method_annotation <- tibble(method = methods_of_interest) %>%
+  mutate(method_type = case_when(
+    method %in% c("logp1", "logp_alpha", "acosh") ~ "Delta method VST",
+    method %in% c("pearson", "rand_quantile") ~ "Residual VST",
+    method %in% c("pca_logp1", "pca_logp_alpha", "pca_acosh") ~ "Delta method VST + PCA",
+    method %in% c("pca_pearson", "pca_rand_quantile") ~ "Residual VST + PCA",
+    method == "sanity_dists" ~ "Sanity",
+    TRUE ~ NA_character_
+  )) %>%
+  mutate(method_type = factor(method_type, levels = c("Delta method VST", "Residual VST", "Delta method VST + PCA", "Residual VST + PCA", "Sanity")))
+
+
+method_annotation
+```
+
+
+
+```{r overviewplot, fig.width=15, fig.height=8}
+color_map <-  c("Delta method VST" = "#022B3A", "Residual VST" = "#1F7A8C", 
+                "Delta method VST + PCA" = "#FF521B", "Residual VST + PCA" = "#F2AF29",
+                "Sanity" = "#A3C9A8")
+
+res %>%
+  left_join(method_annotation) %>%
+  # filter(pcadim == 150) %>%
+  filter(data %in% c("linear_random_tree", "random_tree")) %>%
+  ggplot(aes(x = method, y = mean / knn)) +
+    geom_hline(yintercept = seq(0, 1, by = 0.1), color = "lightgrey", alpha = 0.2) +
+    geom_hline(yintercept = seq(0, 1, by = 0.5), color = "lightgrey", alpha = 0.8) +
+    ggbeeswarm::geom_quasirandom(aes(color = method_type)) +
+    facet_wrap(vars(data, knn, pcadim), labeller = label_both) +
+    scale_color_manual(values = color_map) +
+    scale_y_continuous(expand = expansion(0)) +
+    theme(axis.text.x = element_text(angle = 60, hjust = 1))
+```
+
+
+Main Figure
+
+KNN = 20, pca_dim = 20,50
+
+```{r main_figure}
+x_axis_labels <- c("logp1" = expression(log(x+1)), "logp_alpha" = expression(log(x+1/(4*alpha))), "acosh" = expression(acosh(2*alpha*x+1)),
+                   "pearson" = "Pearson Residuals", "rand_quantile" = "Rand Quantile Resid",
+                   "pca_logp1" = expression(log(x+1)), "pca_logp_alpha" = expression(log(x+1/(4*alpha))), "pca_acosh" = expression(acosh(2*alpha*x+1)),
+                   "pca_pearson" = "Pearson Residuals", "pca_rand_quantile" = "Rand Quantile Resid",
+                   "sanity_dists" = "Sanity")
+
+
+p1 <- res %>%
+  left_join(method_annotation) %>%
+  filter(data == "linear_random_tree" & knn == 100 & pcadim == 20) %>%
+  ggplot(aes(x = method, y = mean / knn)) +
+    geom_hline(yintercept = seq(0, 1, by = 0.1), color = "lightgrey", alpha = 0.2) +
+    geom_hline(yintercept = seq(0, 1, by = 0.5), color = "lightgrey", alpha = 0.8) +
+    geom_vline(xintercept = seq(1, 11), color = "lightgrey", alpha = 0.2) +
+    ggbeeswarm::geom_quasirandom(aes(color = method_type)) +
+    scale_color_manual(values = color_map) +
+    scale_y_continuous(expand = expansion(0)) +
+    scale_x_discrete(labels = x_axis_labels) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+          axis.title.x = element_blank(),
+          plot.margin = margin(t = 7, r = 4, b = 7, l = 7)) +
+    labs(x = "", y = "Mean KNN Recall", 
+         title = "K-nearest neighbor recall on simulated data",
+         subtitle = "Branched linear manifold")
+
+
+p2 <- res %>%
+  left_join(method_annotation) %>%
+  filter(data == "random_tree" & knn == 100 & pcadim == 150) %>%
+  ggplot(aes(x = method, y = mean / knn)) +
+    geom_hline(yintercept = seq(0, 1, by = 0.1), color = "lightgrey", alpha = 0.2) +
+    geom_hline(yintercept = seq(0, 1, by = 0.5), color = "lightgrey", alpha = 0.8) +
+    geom_vline(xintercept = seq(1, 11), color = "lightgrey", alpha = 0.2) +
+    ggbeeswarm::geom_quasirandom(aes(color = method_type)) +
+    scale_color_manual(values = color_map) +
+    scale_y_continuous(expand = expansion(0)) +
+    scale_x_discrete(labels = x_axis_labels) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1), 
+          axis.text.y = element_blank(), axis.title = element_blank(),
+          plot.margin = margin(t = 7, r = 7, b = 7, l = 3)) +
+    labs(x = "", 
+         y = "",
+         # title = "K-nearest neighbor recall on simulate ndata",
+         subtitle = "Branched random walk")
+
+legend <- cowplot::get_legend(p1 + theme(legend.position = "bottom") + 
+                                guides(color = guide_legend(title = "", override.aes = list(size = 3),
+                                                            label.hjust = 0, label.theme =  element_text(size = 8))))
+
+cowplot::plot_grid(
+  cowplot::plot_grid(p1 + guides(color = FALSE), p2 + guides(color = FALSE),
+                   nrow = 1, align = "h"),
+  cowplot::plot_grid(NULL, legend, NULL,
+                     nrow =1, rel_widths = c(1, 1, 1)),
+  ncol = 1, rel_heights = c(1, 0.1)
+)
+
+cowplot::save_plot("../output/simulated_data_benchmark_main.pdf", last_plot(), ncol = 2, base_asp = 1.2)
+
+```
+
+```{r}
+time_minor_ticks <- tibble(ticks = c(seq(0, 60, by = 10), seq(0, 60 * 60, by = 10 * 60), seq(0, 24 * 60 * 60, by = 6 * 60 * 60), seq(0, 7 * 24 * 60 * 60, by = 24 * 60 * 60)))
+time_major_ticks <- tibble(ticks = c(1, 60, 60 * 60, 24 * 60 * 60, 7 * 24 * 60 * 60))
+```
+
+
+
+```{r}
+rel_scaling_factor_lin <- filter(res, data == "linear_random_tree" & knn == 100 & pcadim == 20 & method == "pca_logp1") %>%
+  pull(total_duration) %>% 
+  median()
+
+rel_scaling_factor_tree <- filter(res, data == "random_tree" & knn == 100 & pcadim == 150 & method == "pca_logp1") %>%
+  pull(total_duration) %>% 
+  median()
+
+
+p1 <- res %>%
+  left_join(method_annotation) %>%
+  filter(data == "linear_random_tree" & knn == 100 & pcadim == 20) %>%
+  ggplot(aes(x = method, y = total_duration)) +
+    geom_rug(data = time_minor_ticks, aes(y = ticks, x = 0), sides = "l", color = "black", length = unit(0.1, "cm")) +
+    geom_rug(data = time_major_ticks, aes(y = ticks, x = 0), sides = "l", color = "black", length = unit(0.3, "cm")) +
+    geom_hline(yintercept = c(1, 60, 60 * 60, 24 * 60 * 60, 7 * 24 * 60 * 60), color = "lightgrey", alpha = 0.2) +
+    geom_vline(xintercept = seq(1, 11), color = "lightgrey", alpha = 0.2) +
+    ggbeeswarm::geom_quasirandom(aes(color = method_type)) +
+    scale_color_manual(values = color_map) + 
+    guides(color = FALSE) +
+    scale_y_log10(breaks = c(0.001, 1, 60, 60 * 60, 24 * 60 * 60, 7 * 24 * 60 * 60), 
+          labels = c("1ms", "1sec", "1min", "1hour", "1day", "1week"), limits = c(1, 7 * 24 * 60 * 60),
+          name = "Absolute",
+          sec.axis = sec_axis(trans = ~ .x / rel_scaling_factor_lin,
+                              breaks = c(1, 10, 100, 1000, 10000), 
+                              labels = c(1, 10, 100, "1,000", "10,000"),
+                              name = "Relative")) +
+    scale_x_discrete(labels = x_axis_labels) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+          # axis.title.y.left = element_blank(), 
+          axis.title.y.right = element_blank(),
+          axis.title.x = element_blank(),
+          plot.margin = margin(t = 7, r = 4, b = 7, l = 7)) +
+    labs(x = "", y = "", 
+         title = "Duration (Transformation + KNN-search)", subtitle = "Branched linear manifold")
+
+p2 <- res %>%
+  left_join(method_annotation) %>%
+  filter(data == "random_tree" & knn == 100 & pcadim == 150) %>%
+  ggplot(aes(x = method, y = total_duration)) +
+    geom_rug(data = time_minor_ticks, aes(y = ticks, x = 0), sides = "l", color = "black", length = unit(0.1, "cm")) +
+    geom_rug(data = time_major_ticks, aes(y = ticks, x = 0), sides = "l", color = "black", length = unit(0.3, "cm")) +
+    geom_hline(yintercept = c(1, 60, 60 * 60, 24 * 60 * 60, 7 * 24 * 60 * 60), color = "lightgrey", alpha = 0.2) +
+    geom_vline(xintercept = seq(1, 11), color = "lightgrey", alpha = 0.2) +
+    ggbeeswarm::geom_quasirandom(aes(color = method_type)) +
+    scale_color_manual(values = color_map) + 
+    guides(color = FALSE) +
+    scale_y_log10(breaks = c(0.001, 1, 60, 60 * 60, 24 * 60 * 60, 7 * 24 * 60 * 60), 
+          labels = c("1ms", "1sec", "1min", "1hour", "1day", "1week"), limits = c(1, 7 * 24 * 60 * 60),
+          sec.axis = sec_axis(trans = ~ .x / rel_scaling_factor_tree,
+                              breaks = c(1, 10, 100, 1000, 10000), 
+                              labels = c(1, 10, 100, "1,000", "10,000"),
+                              name = "Relative")) +
+    scale_x_discrete(labels = x_axis_labels) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+          axis.title.y.left = element_blank(), axis.text.y.left = element_blank(),
+          axis.title.x = element_blank(),
+          plot.margin = margin(t = 7, r = 7, b = 7, l = 3)) +
+    labs(x = "", y = "", 
+         subtitle = "Branched random tree")
+
+
+
+cowplot::plot_grid(p1, p2, nrow = 1, align = "h", rel_widths = c(1, 0.9))
+
+cowplot::save_plot("../output/simulated_data_benchmark_duration.pdf", last_plot(), base_asp = 1.4, ncol = 2)
+
+```
+
+
+
+
+
+# PCA trend
+
+
+
+```{r fig.width=10, fig.height=4}
+p1 <- res %>%
+  left_join(method_annotation) %>%
+  filter(data == "linear_random_tree" & knn == 100) %>%
+  filter(group == "PCA" | group == "Sanity") %>%
+  group_by(method, pcadim, knn, group) %>%
+  summarize(mean = median(mean), .groups = "drop") %>%
+  mutate(method = fct_relevel(method, "sanity_dists", "pca_logp_alpha", "pca_acosh", "pca_logp1", "pca_rand_quantile", "pca_pearson")) %>%
+  mutate(method = fct_drop(method)) %>%
+  ggplot(aes(x = pcadim, y = mean / knn, color = method)) +
+    geom_hline(yintercept = seq(0, 1, by = 0.1), color = "lightgrey", alpha = 0.2) +
+    geom_hline(yintercept = seq(0, 1, by = 0.5), color = "lightgrey", alpha = 0.8) +
+    geom_line(data = . %>% filter(group == "Sanity"), size = 1.5, linetype = "dashed") +
+    geom_point(data = . %>% filter(group == "PCA")) +
+    geom_line(data = . %>% filter(group == "PCA"), size = 1.5) +
+    annotation_logticks(sides = "b") +
+    scale_color_discrete(labels = x_axis_labels, drop = FALSE) +
+    scale_x_log10(breaks = c(2, 5, 10, 20, 50, 100, 200, 400)) +
+    scale_y_continuous(expand = expansion(0)) +
+    labs(x = "#PCA Dimensions", y = "Mean KNN Recall", 
+         title = "The best number of dimensions for PCA is dataset dependent",
+         subtitle = "Branched linear manifold")
+
+p2 <- res %>%
+  left_join(method_annotation) %>%
+  filter(data == "random_tree" & knn == 100) %>%
+  filter(group == "PCA" | group == "Sanity") %>%
+  group_by(method, pcadim, knn, group) %>%
+  summarize(mean = median(mean), .groups = "drop") %>%
+  mutate(method = fct_relevel(method, "sanity_dists", "pca_logp_alpha", "pca_acosh", "pca_logp1", "pca_rand_quantile", "pca_pearson")) %>%
+  mutate(method = fct_drop(method)) %>%
+  ggplot(aes(x = pcadim, y = mean / knn, color = method)) +
+    geom_hline(yintercept = seq(0, 1, by = 0.1), color = "lightgrey", alpha = 0.2) +
+    geom_hline(yintercept = seq(0, 1, by = 0.5), color = "lightgrey", alpha = 0.8) +
+    geom_line(data = . %>% filter(group == "Sanity"), size = 1.5, linetype = "dashed") +
+    geom_point(data = . %>% filter(group == "PCA")) +
+    geom_line(data = . %>% filter(group == "PCA"), size = 1.5) +
+    annotation_logticks(sides = "b") +
+    scale_color_discrete(labels = x_axis_labels, drop = FALSE) +
+    scale_x_log10(breaks = c(2, 5, 10, 20, 50, 100, 200, 400)) +
+    scale_y_continuous(expand = expansion(0)) +
+    labs(x = "#PCA Dimensions", y = "Mean KNN Recall",
+         title = "",
+         subtitle = "Branched random tree") +
+    theme(axis.text.y = element_blank(), axis.title.y = element_blank(),
+          plot.margin = margin(t = 7, r = 7, b = 7, l = 3)) 
+
+
+legend <- cowplot::get_legend(p1 +
+                                guides(color = guide_legend(title = "", override.aes = list(size = 3),
+                                                            label.hjust = 0, label.theme =  element_text(size = 12))))
+
+cowplot::plot_grid(p1 + guides(color = FALSE), p2 + guides(color = FALSE), legend,
+                   nrow = 1, align = "hv", rel_widths = c(1.2, 1, 0.5))
+
+cowplot::save_plot("../output/simulated_data_benchmark_pca_dimensions.pdf", last_plot(), ncol = 2.5, base_asp = 1.2)
+
+```
+
+
+

@@ -1,0 +1,206 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+library(tidyverse)
+library(SingleCellExperiment)
+library(sctransform)
+```
+
+
+Helper function, so that the content of the sctransform results stay in order
+```{r}
+transform_sctrans_object <- function(sctrans_obj, Y){
+  fit  <- list(overdispersions = rep(NA, nrow(Y)),
+                  PearsonResiduals = array(NA, dim(Y)),
+                  Mu <- array(NA, dim(Y)),
+                  Beta = matrix(NA, nrow = nrow(Y), ncol = 2),
+                  Beta_unreg = matrix(NA, nrow = nrow(Y), ncol = 2),
+                  overdispersions_unreg = rep(NA, nrow(Y)),
+                  gmean = rep(NA, nrow(Y)))
+  sf <- colSums2(Y)
+  
+  indices <- match(rownames(sctrans_obj$model_pars_fit), rownames(Y))
+  indices_unreg <- match(rownames(sctrans_obj$model_pars), rownames(Y))
+  fit$overdispersions[indices] <- 1/sctrans_obj$model_pars_fit[,"theta"]
+  fit$PearsonResiduals[indices, ] <- sctrans_obj$y
+  fit$Beta[indices, ] <- sctrans_obj$model_pars_fit[, c("(Intercept)", "log_umi")]
+  fit$Beta_unreg[indices_unreg, ] <- sctrans_obj$model_pars[, c("(Intercept)", "log_umi")]
+  fit$Mu <- exp(fit$Beta %*% t(cbind(1, log10(sf))))
+  fit$Mu_unreg <- exp(fit$Beta_unreg %*% t(cbind(1, log10(sf))))
+  fit$overdispersions_unreg[indices_unreg] <- 1 / sctrans_obj$model_pars[, "theta"]
+  fit$gmean[indices] <- sctrans_obj$gene_attr$gmean
+  
+  fit
+}
+```
+
+
+Load Data
+
+```{r}
+load_data_fnc <- list(
+  NIH3T3 = function() HighlyReplicatedRNASeq::SingleCell_homogeneous_cells("TENx_NIH3T3"),
+  HEK239T = function() HighlyReplicatedRNASeq::SingleCell_homogeneous_cells("TENx_HEK293T"),
+  PBMC4k = function() TENxPBMCData::TENxPBMCData("pbmc4k"),
+  Mesmer = function() scRNAseq::MessmerESCData(), 
+  Zeisel = function() scRNAseq::ZeiselBrainData(),
+  Zhen = function() DuoClustering2018::sce_filteredExpr10_Zhengmix4eq()
+)
+```
+
+Run sctransform 3 times on each dataset
+
+- Standard Poisson model
+- Offset with flexible theta estimation
+- Offset with fixed theta
+
+```{r, warning = FALSE}
+
+full_data <- bind_rows(lapply(names(load_data_fnc), function(name){
+  print(paste0("Loading ", name))
+  
+  se <- load_data_fnc[[name]]()
+  
+  rownames(se) <- paste0("Gene_", 1:nrow(se))
+  colnames(se) <- paste0("Cell_", 1:ncol(se))
+  # Subsample data to 3000x1000 elements
+  se_red <- se[sample(seq_len(nrow(se)), min(3000, nrow(se))), sample(seq_len(ncol(se)), min(1000, ncol(se)))]
+  
+  Y <- as.matrix(assay(se_red))
+  
+  set.seed(1)
+  sctrans_intermediate <- vst(Y, method = "poisson")
+  fit_pois <- transform_sctrans_object(sctrans_intermediate, Y)
+  # To make sure that I am actually running the correct sctransform version
+  # I check if the indicator value is set
+  stopifnot(isTRUE(sctrans_intermediate$is_fork))
+  
+  set.seed(1)
+  sctrans_intermediate2 <- vst(Y, method = "offset", theta_given = NULL)
+  fit_off <- transform_sctrans_object(sctrans_intermediate2, Y)
+  
+  set.seed(1)
+  sctrans_intermediate3 <- vst(Y, method = "offset", theta_given = 100)
+  fit_off_fixed <- transform_sctrans_object(sctrans_intermediate3, Y)
+  
+  theta_given <- rep(100, nrow(Y))
+  names(theta_given) <- rownames(Y)
+  set.seed(1)
+  sctrans_intermediate4 <- vst(Y, method = "nb_theta_given", theta_given = theta_given)
+  fit_pois_fixed <- transform_sctrans_object(sctrans_intermediate4, Y)
+
+  
+  tibble(Dataset = name,
+         Poisson = c(fit_pois$PearsonResiduals),
+         PoissonFixed = c(fit_pois_fixed$PearsonResiduals),
+         Offset = c(fit_off$PearsonResiduals),
+         OffsetFixed = c(fit_off_fixed$PearsonResiduals),
+         ExpressionLevel = c(fit_off$Mu),
+         y = c(Y))
+}))
+
+
+```
+
+
+
+
+
+
+```{r, fig.width=15, fig.height=3}
+p1 <- full_data %>%
+  drop_na() %>%
+  # sample_n(5000) %>%
+  ggplot(aes(x= Poisson, y = Offset - Poisson)) +
+    geom_hline(yintercept = 0, color = "#E9E9E9") +
+    scattermore::geom_scattermore(aes(color = y), pointsize = 2.5, pixels = c(512, 512), alpha = 0.1) +
+    scale_color_viridis_c(direction = 1, option = "magma", begin = 0.2, end = 0.8, 
+                          trans = "log1p", breaks = c(0, 10, 100, 1000),
+                          labels = c(0, 10, 100, ">1000"), limits = c(0, 1001), 
+                          oob = scales::oob_squish_any, 
+                          minor_breaks = c(0:9, seq(10, 90, by = 10), seq(100, 1000, by = 100))) +
+    scale_y_continuous(limits = c(-30, 30)) +
+    facet_wrap(~ Dataset, nrow = 1) +
+    cowplot::theme_cowplot() +
+    labs(title = expression(Effect~of~fixing~beta[s]==1),
+         color = "Y", 
+         x = "Residuals from the default sctransform model",
+         y = expression(Delta[1]))
+
+
+p1
+```
+
+```{r, fig.width=15, fig.height=3}
+p2 <- full_data %>%
+  drop_na() %>%
+  # sample_n(5000) %>%
+  ggplot(aes(x= Poisson, y = PoissonFixed - Poisson)) +
+    geom_hline(yintercept = 0, color = "#E9E9E9") +
+    scattermore::geom_scattermore(aes(color = y), pointsize = 2.5, pixels = c(512, 512), alpha = 0.1) +
+    scale_color_viridis_c(direction = 1, option = "magma", begin = 0.2, end = 0.8, 
+                          trans = "log1p", breaks = c(0, 10, 100, 1000),
+                          labels = c(0, 10, 100, ">1000"), limits = c(0, 1001), 
+                          oob = scales::oob_squish_any, 
+                          minor_breaks = c(0:9, seq(10, 90, by = 10), seq(100, 1000, by = 100))) +
+    scale_y_continuous(limits = c(-30, 30)) +
+    facet_wrap(~ Dataset, nrow = 1) +
+    cowplot::theme_cowplot() +
+    labs(title = expression(Effect~of~fixing~alpha==0.01),
+         color = "Y", 
+         x = "Residuals from the default sctransform model",
+         y = expression(Delta[2]))
+
+p2
+```
+
+
+
+```{r, fig.width=15, fig.height=3}
+p3 <- full_data %>%
+  drop_na() %>%
+  # sample_n(5000) %>%
+  ggplot(aes(x= Poisson, y = OffsetFixed - Poisson)) +
+    geom_hline(yintercept = 0, color = "#E9E9E9") +
+    scattermore::geom_scattermore(aes(color = y), pointsize = 2.5, pixels = c(512, 512), alpha = 0.1) +
+    scale_color_viridis_c(direction = 1, option = "magma", begin = 0.2, end = 0.8, 
+                          trans = "log1p", breaks = c(0, 10, 100, 1000),
+                          labels = c(0, 10, 100, ">1000"), limits = c(0, 1001), 
+                          oob = scales::oob_squish_any, 
+                          minor_breaks = c(0:9, seq(10, 90, by = 10), seq(100, 1000, by = 100))) +
+    scale_y_continuous(limits = c(-30, 30)) +
+    facet_wrap(~ Dataset, nrow = 1) +
+    cowplot::theme_cowplot() +
+    labs(title = expression(Effect~of~fixing~beta[s]==1~and~alpha==0.01),
+         color = "Y", 
+         x = "Residuals from the default sctransform model",
+         y = expression(Delta[3]))
+
+p3
+```
+
+
+
+```{r, fig.width=20, fig.height=10}
+library(patchwork)
+res <- (p1 / p2 / p3) +
+  plot_annotation(tag_levels = "A") + plot_layout(guides = "collect")
+
+res
+```
+
+
+```{r}
+cowplot::save_plot("../output/sctransform_beta_s_and_alpha_importance.pdf", res, 
+                   ncol = 7, nrow = 3, base_asp = 0.6, base_height = 3, device = cairo_pdf)
+```
+
+
+
+
+
+ 

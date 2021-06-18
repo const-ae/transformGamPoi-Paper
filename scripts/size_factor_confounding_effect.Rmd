@@ -1,0 +1,122 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+
+
+
+```{r}
+library(tidyverse)
+library(tidylog)
+set.seed(1)
+```
+
+
+
+
+
+```{r}
+n_genes <- 4000
+n_cells <- 500
+```
+
+```{r}
+mus <- exp(rnorm(n = n_genes, mean = 4, sd = 2.6))
+summary(mus)
+disps <- rchisq(n_genes, df = 5) / 100
+summary(disps)
+```
+
+
+```{r}
+size_factors <- exp(rnorm(n = n_cells, mean = 4, sd = 0.3)) #rep(c(0.5, 2), each = n_cells/2)
+size_factors <- size_factors / mean(size_factors)
+summary(size_factors)
+```
+
+
+
+```{r}
+Y <- t(sapply(seq_along(mus), function(idx){
+  rnbinom(n = n_cells, mu = mus[idx] * size_factors, size = 1 / disps[idx])
+}))
+
+Y[1:5, 1:10]
+```
+
+```{r}
+# vst_delta <- function(x, alpha) 2/sqrt(alpha) * asinh(sqrt(alpha * x))
+vst_delta <- function(x, alpha) 1/sqrt(alpha) * acosh(2 * alpha * x + 1)
+
+Y_delta <- t(sapply(seq_len(nrow(Y)), function(idx){
+  vst_delta(Y[idx, ] / size_factors, alpha = disps[idx])
+}))
+```
+
+
+```{r}
+Y_log <- t(sapply(seq_len(nrow(Y)), function(idx){
+  log(Y[idx, ] / size_factors + 1)
+}))
+```
+
+
+```{r}
+Y_pearson <- gamPoiTransform::gamPoiTransform(Y, residual_type = "pearson", 
+                                              size_factors = size_factors, overdispersion = disps,
+                                              overdispersion_shrinkage = FALSE)
+```
+
+
+```{r}
+Y_rq <- gamPoiTransform::gamPoiTransform(Y, residual_type = "randomized_quantile", 
+                                         size_factors = size_factors, overdispersion = disps,
+                                         overdispersion_shrinkage = FALSE)
+```
+
+
+```{r}
+labels <- c(delta = "acosh(2*alpha*x+1)", 
+            log ="log(x+1)",
+            pearson = "Pearson~Resid.", 
+            rq = "Rand.~Quantile~Resid.")
+
+tmp <- tibble(cell_id = seq_len(n_cells),
+       delta = t(Y_delta), log = t(Y_log),
+       pearson = t(Y_pearson), rq = t(Y_rq),
+       size_factor = size_factors) %>%
+  pivot_longer(c(delta, log, pearson, rq), names_to = "method", values_to = "Y") %>%  
+  mutate(facet_label = labels[method]) %>%
+  group_by(method) %>%
+  mutate(pca = irlba::prcomp_irlba(Y, n = 2)$x)
+```
+
+
+```{r}
+
+res <- ggplot(tmp, aes(x = pca[,1], y = pca[,2])) +
+    geom_point(aes(color = size_factor)) +
+    facet_wrap(~ facet_label, nrow = 1, labeller = label_parsed) +
+    coord_fixed(xlim = c(-20, 20), ylim = c(-20, 20)) +
+    scale_color_viridis_c(trans = "log2") +
+    labs(x = "PC 1", y = "PC 2", color = "Size Factor",
+         title = "Effect of Varying Size Factors on Transformation of Homogeneous Data") +
+    cowplot::theme_cowplot() +
+    theme(legend.position = "bottom",
+          legend.justification = "center", 
+          legend.key.size = unit(12, "pt"),
+          legend.title = element_text(size = 12),
+          strip.text = element_text(size = rel(0.9)),
+          strip.background = element_blank()) 
+
+res 
+```
+
+
+
+```{r}
+cowplot::save_plot("../output/size_factor_effect_after_vst.pdf", res, nrow = 1, ncol = 2.8, base_asp = 1)
+```
+

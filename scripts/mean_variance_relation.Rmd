@@ -1,0 +1,421 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+library(tidyverse)
+library(MatrixGenerics)
+library(SingleCellExperiment)
+```
+
+```{r}
+lseq <- function(from, to, length.out){
+  exp(seq(log(from), log(to), length.out = length.out))
+}
+theme_set(cowplot::theme_cowplot())
+```
+
+
+
+```{r}
+library(org.Hs.eg.db)
+human_cell_cycle_genes <- select(org.Hs.eg.db, keytype = "GOALL", keys = "GO:0007049", columns = "ENSEMBL")[, "ENSEMBL"]
+library(org.Mm.eg.db)
+mouse_cell_cycle_genes <- select(org.Mm.eg.db, keytype = "GOALL", keys = "GO:0007049", columns = "ENSEMBL")[, "ENSEMBL"]
+```
+
+
+```{r}
+mu_sup <- lseq(1e-4, 1e6, length.out = 1001)
+poisson_pred <- cross_df(list(mu = mu_sup, factor = 10^seq(-8, 8))) %>%
+  mutate(var = mu * factor)
+
+gampoi_pred <- cross_df(list(mu = mu_sup, factor = 10^seq(-2, 2, by = 2))) %>%
+  mutate(var = mu + mu^2 * factor) 
+```
+
+
+# Technical control experiments
+
+```{r}
+se <- HighlyReplicatedRNASeq::SingleCell_RNA_solution("klein_2015")
+sf <- colSums2(assay(se))
+thres <- quantile(sf, 0.5) * c(1, 1.3)
+hist(sf, breaks = 50); abline(v = thres, col = "red", lwd = 2)
+
+se_red <- se[, sf > thres[1] & sf < thres[2]]
+sf_red <- sf[sf > thres[1] & sf < thres[2]]
+se_red <- se_red[rowSums2(assay(se_red)) > 0]
+dim(se_red)
+
+mu <- rowMeans2(assay(se_red))
+var <- rowVars(assay(se_red))
+```
+
+
+```{r}
+tibble(mu, var, ercc_gene = str_starts(rownames(se_red), "ERCC-")) %>%
+  mutate(mu_pred = mu, mu_sq_pred = mu^2) %>%
+  ggplot(aes(x = mu, y = var)) +
+    geom_line(data = poisson_pred, aes(group = factor), color = "lightgray", size = 0.1) +
+    geom_line(data = gampoi_pred %>% filter((factor == 100 & var < 1.5e3) | (factor != 100 & var < 4e3)), 
+              aes(group = factor), color = "#DEB554", size = 0.8) +
+    geom_line(data = poisson_pred %>% filter(factor == 1 & mu < 4e3), aes(group = factor), color = "#C981DE", size = 1.2) +
+    coord_fixed(expand = FALSE, clip = "off") +
+    ggrastr::geom_point_rast(aes(color = ercc_gene), size = 0.1, show.legend = FALSE) +
+    annotate(shadowtext:::GeomShadowText, x = 5e3, y = 5e3, label = expression(Var==mu),
+             hjust = 0, vjust = 0.5, angle = 45, size = 4, color = "black", bg.colour = "white") +
+    annotate(shadowtext:::GeomShadowText, x = sqrt(4e3), y = 4e3, label = expression(Var==mu+1*mu^2),
+             hjust = 0, vjust = 0.4, angle = atan(2) / pi * 180, size = 4, color = "black", bg.colour = "white") +
+    annotate(shadowtext:::GeomShadowText, x = sqrt(5e3 / 0.01), y = 5e3, label = expression(Var==mu+0.01*mu^2),
+             hjust = 0, vjust = 0.4, angle = atan(2) / pi * 180, size = 4, color = "black", bg.colour = "white") +
+    annotate(shadowtext:::GeomShadowText, x = sqrt(2e3 / 100), y = 2e3, label = expression(Var==mu+100*mu^2),
+             hjust = 0, vjust = 0.4, angle = atan(2) / pi * 180, size = 4, color = "black", bg.colour = "white") +
+    annotation_logticks(scaled = TRUE, outside = FALSE, size = 0.2,
+                        short = unit(0.05, "cm"), mid = unit(0.1, "cm"), long = unit(0.15, "cm")) +
+    scale_x_log10(breaks = c(0.001, 0.1, 10, 1000, 1e5), limits = c(1e-3, 1e5),
+                  labels = c(expression(10^-3), expression(10^-1), 
+                             expression(10),  expression(10^3), expression(10^5)),
+                  name = expression(Mean~(mu))) +
+    scale_y_log10(breaks = c(0.001, 0.1, 10, 1000, 1e5), limits = c(1e-3, 1e6),
+                  labels = c(expression(10^-3), expression(10^-1), 
+                             expression(10),  expression(10^3), expression(10^5)),
+                  name = expression(Variance)) +
+    scale_color_manual(values = c("TRUE" = "#6c58d1", "FALSE" = "black")) +
+    ggtitle("Klein 2015", subtitle = "<span style = 'color: #6c58d1'>ERCC spike-ins</span>") +
+    theme(plot.subtitle = ggtext::element_markdown())
+
+
+tech_p1 <- last_plot()
+```
+
+
+```{r}
+se <- HighlyReplicatedRNASeq::SingleCell_RNA_solution("svensson1_2017")
+sf <- colSums2(assay(se))
+thres <- quantile(sf, 0.5) * c(1, 1.3)
+hist(sf, breaks = 50); abline(v = thres, col = "red", lwd = 2)
+
+se_red <- se[, sf > thres[1] & sf < thres[2]]
+sf_red <- sf[sf > thres[1] & sf < thres[2]]
+se_red <- se_red[rowSums2(assay(se_red)) > 0]
+dim(se_red)
+
+mu <- rowMeans2(assay(se_red))
+var <- rowVars(assay(se_red))
+```
+
+
+```{r}
+tibble(mu, var, ercc_gene = str_starts(rownames(se_red), "ERCC-")) %>%
+  mutate(mu_pred = mu, mu_sq_pred = mu^2) %>%
+  ggplot(aes(x = mu, y = var)) +
+    geom_line(data = poisson_pred, aes(group = factor), color = "lightgray", size = 0.1) +
+    # geom_line(data = gampoi_pred %>% filter(var < 4e3), aes(group = factor), color = "#DEB554", size = 0.8) +
+    # geom_line(data = poisson_pred %>% filter(factor == 1 & mu < 4e3), aes(group = factor), color = "#C981DE", size = 1.2) +
+    geom_line(data = gampoi_pred, aes(group = factor), color = "#DEB554", size = 0.8) +
+    geom_line(data = poisson_pred %>% filter(factor == 1), aes(group = factor), color = "#C981DE", size = 1.2) +
+    coord_fixed(expand = FALSE, clip = "off") +
+    ggrastr::geom_point_rast(aes(color = ercc_gene), size = 0.1, show.legend = FALSE) +
+    annotation_logticks(scaled = TRUE, outside = FALSE, size = 0.2,
+                        short = unit(0.05, "cm"), mid = unit(0.1, "cm"), long = unit(0.15, "cm")) +
+    scale_x_log10(breaks = c(0.001, 0.1, 10, 1000, 1e5), limits = c(1e-3, 1e5),
+                  labels = c(expression(10^-3), expression(10^-1), 
+                             expression(10),  expression(10^3), expression(10^5)),
+                  name = expression(Mean~(mu))) +
+    scale_y_log10(breaks = c(0.001, 0.1, 10, 1000, 1e5), limits = c(1e-3, 1e6),
+                  labels = c(expression(10^-3), expression(10^-1), 
+                             expression(10),  expression(10^3), expression(10^5)),
+                  name = expression(Variance)) +
+    scale_color_manual(values = c("TRUE" = "#6c58d1", "FALSE" = "black")) +
+    ggtitle("Svensson 2017 (1)", subtitle = "") +
+    theme(plot.subtitle = ggtext::element_markdown())
+
+tech_p2 <- last_plot()
+```
+
+
+```{r}
+se <- HighlyReplicatedRNASeq::SingleCell_RNA_solution("svensson2_2017")
+sf <- colSums2(assay(se))
+thres <- quantile(sf, 0.5) * c(1, 1.3)
+hist(sf, breaks = 50); abline(v = thres, col = "red", lwd = 2)
+
+se_red <- se[, sf > thres[1] & sf < thres[2]]
+sf_red <- sf[sf > thres[1] & sf < thres[2]]
+se_red <- se_red[rowSums2(assay(se_red)) > 0]
+dim(se_red)
+
+mu <- rowMeans2(assay(se_red))
+var <- rowVars(assay(se_red))
+```
+
+
+```{r}
+tibble(mu, var, ercc_gene = str_starts(rownames(se_red), "ERCC-")) %>%
+  mutate(mu_pred = mu, mu_sq_pred = mu^2) %>%
+  ggplot(aes(x = mu, y = var)) +
+    geom_line(data = poisson_pred, aes(group = factor), color = "lightgray", size = 0.1) +
+    # geom_line(data = gampoi_pred %>% filter(var < 4e3), aes(group = factor), color = "#DEB554", size = 0.8) +
+    # geom_line(data = poisson_pred %>% filter(factor == 1 & mu < 4e3), aes(group = factor), color = "#C981DE", size = 1.2) +
+    geom_line(data = gampoi_pred, aes(group = factor), color = "#DEB554", size = 0.8) +
+    geom_line(data = poisson_pred %>% filter(factor == 1), aes(group = factor), color = "#C981DE", size = 1.2) +
+    coord_fixed(expand = FALSE, clip = "off") +
+    ggrastr::geom_point_rast(aes(color = ercc_gene), size = 0.1, show.legend = FALSE) +
+    annotation_logticks(scaled = TRUE, outside = FALSE, size = 0.2,
+                        short = unit(0.05, "cm"), mid = unit(0.1, "cm"), long = unit(0.15, "cm")) +
+    scale_x_log10(breaks = c(0.001, 0.1, 10, 1000, 1e5), limits = c(1e-3, 1e5),
+                  labels = c(expression(10^-3), expression(10^-1), 
+                             expression(10),  expression(10^3), expression(10^5)),
+                  name = expression(Mean~(mu))) +
+    scale_y_log10(breaks = c(0.001, 0.1, 10, 1000, 1e5), limits = c(1e-3, 1e6),
+                  labels = c(expression(10^-3), expression(10^-1), 
+                             expression(10),  expression(10^3), expression(10^5)),
+                  name = expression(Variance)) +
+    scale_color_manual(values = c("TRUE" = "#6c58d1", "FALSE" = "black")) +
+    ggtitle("Svensson 2017 (2)", subtitle = "") +
+    theme(plot.subtitle = ggtext::element_markdown())
+
+tech_p3 <- last_plot()
+```
+
+
+
+# Biological control
+
+
+```{r}
+se <- HighlyReplicatedRNASeq::SingleCell_homogeneous_cells("TENx_NIH3T3")
+
+sf <- colSums2(assay(se))
+thres <- quantile(sf, 0.5) * c(1, 1.3)
+hist(sf, breaks = 50); abline(v = thres, col = "red", lwd = 2)
+
+se_red <- se[, sf > thres[1] & sf < thres[2]]
+sf_red <- sf[sf > thres[1] & sf < thres[2]]
+se_red <- se_red[rowSums2(assay(se_red)) > 0]
+dim(se_red)
+
+mu <- rowMeans2(assay(se_red))
+var <- rowVars(assay(se_red))
+```
+
+
+```{r}
+tibble(mu, var, cell_cycle_gene = rownames(se_red) %in% mouse_cell_cycle_genes) %>%
+  mutate(mu_pred = mu, mu_sq_pred = mu^2) %>%
+  ggplot(aes(x = mu, y = var)) +
+    geom_line(data = poisson_pred, aes(group = factor), color = "lightgray", size = 0.1) +
+    geom_line(data = gampoi_pred %>% filter((factor == 100 & var < 1.5e3) | (factor != 100 & var < 4e3)), 
+              aes(group = factor), color = "#DEB554", size = 0.8) +
+    geom_line(data = poisson_pred %>% filter(factor == 1 & mu < 4e3), aes(group = factor), color = "#C981DE", size = 1.2) +
+    # geom_line(data = gampoi_pred, aes(group = factor), color = "#DEB554", size = 0.8) +
+    # geom_line(data = poisson_pred %>% filter(factor == 1), aes(group = factor), color = "#C981DE", size = 1.2) +
+    coord_fixed(expand = FALSE, clip = "off") +
+    # geom_point(size = 0.3, alpha = 0.3) +
+    ggrastr::geom_point_rast(aes(color = cell_cycle_gene), size = 0.1, show.legend = FALSE) +
+    annotate(shadowtext:::GeomShadowText, x = 5e3, y = 5e3, label = expression(Var==mu),
+             hjust = 0, vjust = 0.5, angle = 45, size = 4, color = "black", bg.colour = "white") +
+    annotate(shadowtext:::GeomShadowText, x = sqrt(4e3), y = 4e3, label = expression(Var==mu+1*mu^2),
+             hjust = 0, vjust = 0.4, angle = atan(2) / pi * 180, size = 4, color = "black", bg.colour = "white") +
+    annotate(shadowtext:::GeomShadowText, x = sqrt(5e3 / 0.01), y = 5e3, label = expression(Var==mu+0.01*mu^2),
+             hjust = 0, vjust = 0.4, angle = atan(2) / pi * 180, size = 4, color = "black", bg.colour = "white") +
+    annotate(shadowtext:::GeomShadowText, x = sqrt(2e3 / 100), y = 2e3, label = expression(Var==mu+100*mu^2),
+             hjust = 0, vjust = 0.4, angle = atan(2) / pi * 180, size = 4, color = "black", bg.colour = "white") +
+    annotation_logticks(scaled = TRUE, outside = FALSE, size = 0.2,
+                        short = unit(0.05, "cm"), mid = unit(0.1, "cm"), long = unit(0.15, "cm")) +
+    scale_x_log10(breaks = c(0.001, 0.1, 10, 1000, 1e5), limits = c(1e-3, 1e5),
+                  labels = c(expression(10^-3), expression(10^-1), 
+                             expression(10),  expression(10^3), expression(10^5)),
+                  name = expression(Mean~(mu))) +
+    scale_y_log10(breaks = c(0.001, 0.1, 10, 1000, 1e5), limits = c(1e-3, 1e6),
+                  labels = c(expression(10^-3), expression(10^-1), 
+                             expression(10),  expression(10^3), expression(10^5)),
+                  name = expression(Variance)) +
+    scale_color_manual(values = c("TRUE" = "#87172f", "FALSE" = "black")) +
+    ggtitle("NIH/3T3 Cells", subtitle = "<span style = 'color: #87172f'>Cell cycle marker</span> genes.") +
+    theme(plot.subtitle = ggtext::element_markdown())
+
+
+p1 <- last_plot()
+```
+
+
+
+
+```{r}
+se <- HighlyReplicatedRNASeq::SingleCell_homogeneous_cells("TENx_HEK293T")
+
+sf <- colSums2(assay(se))
+thres <- quantile(sf, 0.5) * c(1, 1.3)
+hist(sf, breaks = 50); abline(v = thres, col = "red", lwd = 2)
+
+se_red <- se[, sf > thres[1] & sf < thres[2]]
+sf_red <- sf[sf > thres[1] & sf < thres[2]]
+se_red <- se_red[rowSums2(assay(se_red)) > 0]
+dim(se_red)
+
+mu <- rowMeans2(assay(se_red))
+var <- rowVars(assay(se_red))
+
+
+```
+
+
+
+```{r}
+tibble(mu, var, cell_cycle_gene = rownames(se_red) %in% human_cell_cycle_genes) %>%
+  mutate(mu_pred = mu, mu_sq_pred = mu^2) %>%
+  ggplot(aes(x = mu, y = var)) +
+    geom_line(data = poisson_pred, aes(group = factor), color = "lightgray", size = 0.1) +
+    # geom_line(data = gampoi_pred %>% filter(var < 4e3), aes(group = factor), color = "#DEB554", size = 0.8) +
+    # geom_line(data = poisson_pred %>% filter(factor == 1 & mu < 4e3), aes(group = factor), color = "#C981DE", size = 1.2) +
+    geom_line(data = gampoi_pred, aes(group = factor), color = "#DEB554", size = 0.8) +
+    geom_line(data = poisson_pred %>% filter(factor == 1), aes(group = factor), color = "#C981DE", size = 1.2) +
+    coord_fixed(expand = FALSE, clip = "off") +
+    ggrastr::geom_point_rast(aes(color = cell_cycle_gene), size = 0.1, show.legend = FALSE) +
+    annotation_logticks(scaled = TRUE, outside = FALSE, size = 0.2,
+                        short = unit(0.05, "cm"), mid = unit(0.1, "cm"), long = unit(0.15, "cm")) +
+    scale_x_log10(breaks = c(0.001, 0.1, 10, 1000, 1e5), limits = c(1e-3, 1e5),
+                  labels = c(expression(10^-3), expression(10^-1), 
+                             expression(10),  expression(10^3), expression(10^5)),
+                  name = expression(Mean~(mu))) +
+    scale_y_log10(breaks = c(0.001, 0.1, 10, 1000, 1e5), limits = c(1e-3, 1e6),
+                  labels = c(expression(10^-3), expression(10^-1), 
+                             expression(10),  expression(10^3), expression(10^5)),
+                  name = expression(Variance)) +
+    scale_color_manual(values = c("TRUE" = "#87172f", "FALSE" = "black")) +
+    ggtitle("HEK 293T Cells", subtitle = "") +
+    theme(plot.subtitle = ggtext::element_markdown())
+
+p2 <- last_plot()
+```
+
+
+
+```{r}
+# se <- HighlyReplicatedRNASeq::SingleCell_homogeneous_cells("TENx_NIH3T3")
+se_full <- HighlyReplicatedRNASeq::SingleCell_mixology()
+table(se_full$cell_line)
+```
+
+```{r}
+se <- se_full[, se_full$cell_line == "H1975"]
+
+sf <- colSums2(assay(se))
+thres <- quantile(sf, 0.5) * c(1, 1.3)
+hist(sf, breaks = 50); abline(v = thres, col = "red", lwd = 2)
+
+se_red <- se[, sf > thres[1] & sf < thres[2]]
+sf_red <- sf[sf > thres[1] & sf < thres[2]]
+se_red <- se_red[rowSums2(assay(se_red)) > 0]
+dim(se_red)
+
+mu <- rowMeans2(assay(se_red))
+var <- rowVars(assay(se_red))
+```
+
+
+```{r}
+tibble(mu, var, cell_cycle_gene = rownames(se_red) %in% human_cell_cycle_genes) %>%
+  mutate(mu_pred = mu, mu_sq_pred = mu^2) %>%
+  ggplot(aes(x = mu, y = var)) +
+    geom_line(data = poisson_pred, aes(group = factor), color = "lightgray", size = 0.1) +
+    # geom_line(data = gampoi_pred %>% filter(var < 4e3), aes(group = factor), color = "#DEB554", size = 0.8) +
+    # geom_line(data = poisson_pred %>% filter(factor == 1 & mu < 4e3), aes(group = factor), color = "#C981DE", size = 1.2) +
+    geom_line(data = gampoi_pred, aes(group = factor), color = "#DEB554", size = 0.8) +
+    geom_line(data = poisson_pred %>% filter(factor == 1), aes(group = factor), color = "#C981DE", size = 1.2) +
+    coord_fixed(expand = FALSE, clip = "off") +
+    ggrastr::geom_point_rast(aes(color = cell_cycle_gene), size = 0.1, show.legend = FALSE) +
+    annotation_logticks(scaled = TRUE, outside = FALSE, size = 0.2,
+                        short = unit(0.05, "cm"), mid = unit(0.1, "cm"), long = unit(0.15, "cm")) +
+    scale_x_log10(breaks = c(0.001, 0.1, 10, 1000, 1e5), limits = c(1e-3, 1e5),
+                  labels = c(expression(10^-3), expression(10^-1), 
+                             expression(10),  expression(10^3), expression(10^5)),
+                  name = expression(Mean~(mu))) +
+    scale_y_log10(breaks = c(0.001, 0.1, 10, 1000, 1e5), limits = c(1e-3, 1e6),
+                  labels = c(expression(10^-3), expression(10^-1), 
+                             expression(10),  expression(10^3), expression(10^5)),
+                  name = expression(Variance)) +
+    scale_color_manual(values = c("TRUE" = "#87172f", "FALSE" = "black")) +
+    ggtitle("NCI-H1975 Cells", subtitle = "") +
+    theme(plot.subtitle = ggtext::element_markdown())
+
+p3 <- last_plot()
+```
+
+
+
+```{r}
+se <- HighlyReplicatedRNASeq::SingleCell_lymphoblastoid_cell_line()
+# table(se$cellPhase)
+# se <- se[, se$cellPhase == "S"]
+
+sf <- colSums2(assay(se))
+thres <- quantile(sf, 0.5) * c(1, 1.3)
+hist(sf, breaks = 50); abline(v = thres, col = "red", lwd = 2)
+
+se_red <- se[, sf > thres[1] & sf < thres[2]]
+sf_red <- sf[sf > thres[1] & sf < thres[2]]
+se_red <- se_red[rowSums2(assay(se_red)) > 0]
+dim(se_red)
+
+mu <- rowMeans2(assay(se_red))
+var <- rowVars(assay(se_red))
+```
+
+
+```{r}
+tibble(mu, var, cell_cycle_gene = rownames(se_red) %in% human_cell_cycle_genes) %>%
+  mutate(mu_pred = mu, mu_sq_pred = mu^2) %>%
+  ggplot(aes(x = mu, y = var)) +
+    geom_line(data = poisson_pred, aes(group = factor), color = "lightgray", size = 0.1) +
+    # geom_line(data = gampoi_pred %>% filter(var < 4e3), aes(group = factor), color = "#DEB554", size = 0.8) +
+    # geom_line(data = poisson_pred %>% filter(factor == 1 & mu < 4e3), aes(group = factor), color = "#C981DE", size = 1.2) +
+    geom_line(data = gampoi_pred, aes(group = factor), color = "#DEB554", size = 0.8) +
+    geom_line(data = poisson_pred %>% filter(factor == 1), aes(group = factor), color = "#C981DE", size = 1.2) +
+    coord_fixed(expand = FALSE, clip = "off") +
+    ggrastr::geom_point_rast(aes(color = cell_cycle_gene), size = 0.1, show.legend = FALSE) +
+    annotation_logticks(scaled = TRUE, outside = FALSE, size = 0.2,
+                        short = unit(0.05, "cm"), mid = unit(0.1, "cm"), long = unit(0.15, "cm")) +
+    scale_x_log10(breaks = c(0.001, 0.1, 10, 1000, 1e5), limits = c(1e-3, 1e5),
+                  labels = c(expression(10^-3), expression(10^-1), 
+                             expression(10),  expression(10^3), expression(10^5)),
+                  name = expression(Mean~(mu))) +
+    scale_y_log10(breaks = c(0.001, 0.1, 10, 1000, 1e5), limits = c(1e-3, 1e6),
+                  labels = c(expression(10^-3), expression(10^-1), 
+                             expression(10),  expression(10^3), expression(10^5)),
+                  name = expression(Variance)) +
+    scale_color_manual(values = c("TRUE" = "#87172f", "FALSE" = "black")) +
+    ggtitle("GM18502 Cells", subtitle = "") +
+    theme(plot.subtitle = ggtext::element_markdown())
+
+p4 <- last_plot()
+```
+
+
+
+
+```{r, fig.width = 12, fig.heigh = 8}
+p_tech <- cowplot::plot_grid(tech_p1, tech_p2, tech_p3, NULL, nrow = 1, align = "h")
+p_bio <- cowplot::plot_grid(p1, p2, p3, p4, nrow = 1, align = "h")
+
+tech_title <- cowplot::ggdraw() + cowplot::draw_label("(A) Droplets with RNA solution (technical control)", 
+                                                      fontface = "bold", x = 0.02, hjust = 0, size = 18)
+bio_title <- cowplot::ggdraw() + cowplot::draw_label("(B) Cell line populations (biological control)", 
+                                                     fontface = "bold", x = 0.02, hjust = 0, size = 18)
+
+p_res <- cowplot::plot_grid(tech_title, p_tech, bio_title, p_bio, ncol = 1,
+                            rel_heights = c(0.2, 1, 0.2, 1))
+p_res
+```
+
+
+```{r}
+cowplot::save_plot("../output/mean_variance_relation_homnogeneous_cells.pdf", p_res, nrow = 2, ncol = 4, base_asp = 0.68, base_height = 5)
+```
+
+
+

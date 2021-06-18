@@ -1,0 +1,174 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+
+
+
+
+
+
+```{r}
+set.seed(1)
+y <- rnbinom(n = 1e4, mu = 3.5, size = 1 / 0.1)
+```
+
+```{r}
+dgampoi <- function(x, mean, overdispersion){
+  gamma(x + 1/overdispersion)/(gamma(1/overdispersion) * gamma(x + 1)) * 
+    ((mean^2 * overdispersion) / (mean + mean^2 * overdispersion))^x *
+    (1/(1 + mean * overdispersion))^(1/overdispersion)
+}
+
+```
+
+
+```{r}
+cairo_pdf("../output/randomized_quantile_figure/gp_hist.pdf", width = 3, height = 3)
+hist(y+0.5, main = "", breaks = c(-Inf, seq(-1, 10), Inf)+0.5, xlim = c(-1.1, 10.1), prob = TRUE)
+xg <- seq(min(y), max(y), l = 1001)
+dens <- dgampoi(xg, mean = 3.5, overdispersion = 0.1)
+lines(xg, dens, lwd = 2)
+dev.off()
+```
+
+
+
+
+```{r}
+xg <- seq(-0.01, 11, l = 1001)
+
+cdf <- ecdf(y)
+cairo_pdf("../output/randomized_quantile_figure/gp_cdf.pdf", width = 3, height = 3)
+plot(xg, cdf(xg), type = "l", lwd = 2)
+dev.off()
+```
+
+
+
+
+
+```{r}
+xg2 <- seq(-4, 4, l = 1001)
+# y2 <- dnorm(xg2, mean = 0, sd = 1)
+# cairo_pdf("../output/randomized_quantile_figure/normal_dens.pdf", width = 3, height = 3)
+# plot(y2, type = "l")
+# dev.off()
+
+cairo_pdf("../output/randomized_quantile_figure/normal_cdf.pdf", width = 3, height = 3)
+plot(xg2, pnorm(xg2), type = "l")
+dev.off()
+```
+
+
+
+```{r}
+
+fit <- glmGamPoi::glm_gp(y ~ 1, overdispersion = 0.1, overdispersion_shrinkage = FALSE)
+res <- c(residuals(fit, "randomized_quantile"))
+
+cairo_pdf("../output/randomized_quantile_figure/res_hist.pdf", width = 3, height = 3)
+hist(res, breaks = c(-Inf, seq(-4, 4, length.out = 40), Inf), xlim = c(-4, 4), main = "")
+dev.off()
+
+```
+
+
+
+
+
+```{r}
+summary(res[y == 3])
+```
+
+
+
+
+
+
+
+
+
+
+# For bimodal data
+
+```{r}
+set.seed(1)
+y <- c(rnbinom(n = 1e4, mu = 4, size = 1 / 0.01),
+       rnbinom(n = 1e4, mu = 20, size = 1 / 0.01))
+range(y)
+```
+
+```{r}
+fit <- glmGamPoi::glm_gp(y ~ 1, overdispersion_shrinkage = FALSE)
+fit_mu <- fit$Mu[1]
+fit_alpha <- fit$overdispersions[1]
+```
+
+
+
+```{r}
+cairo_pdf("../output/randomized_quantile_figure/bimod_gp_hist.pdf", width = 3, height = 3)
+hist(y+0.5, main = "", breaks = c(-Inf, seq(-1, 37), Inf)+0.5, xlim = c(-1.1, 37.1), prob = TRUE)
+xg <- seq(min(y), max(y), l = 1001)
+dens <- dgampoi(xg, mean = fit_mu, overdispersion = fit_alpha)
+lines(xg, dens, lwd = 2)
+dev.off()
+```
+
+
+
+
+```{r}
+xg <- seq(-0.01, 37, l = 1001)
+
+cdf <- pnbinom(xg, mu = fit_mu, size = 1/fit_alpha)
+cairo_pdf("../output/randomized_quantile_figure/bimod_gp_cdf.pdf", width = 3, height = 3)
+plot(xg, cdf, type = "l", lwd = 2)
+dev.off()
+```
+
+
+
+
+
+
+```{r}
+res <- c(residuals(fit, "randomized_quantile"))
+
+cairo_pdf("../output/randomized_quantile_figure/bimod_res_hist.pdf", width = 3, height = 3)
+hist(res, breaks = c(-Inf, seq(-3.6, 3.5, length.out = 60), Inf), xlim = c(-4, 4), main = "")
+# abline(v = range(res[y == 2]), col = "orange")
+# abline(v = range(res[y == 21]), col = "yellow")
+dev.off()
+
+```
+
+
+
+
+
+```{r}
+summary(res[y == 2])
+summary(res[y == 21])
+```
+
+
+The actual figure was put together in Illustrator.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
