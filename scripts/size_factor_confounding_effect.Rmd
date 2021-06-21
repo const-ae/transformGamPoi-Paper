@@ -64,16 +64,16 @@ Y_log <- t(sapply(seq_len(nrow(Y)), function(idx){
 
 
 ```{r}
-Y_pearson <- gamPoiTransform::gamPoiTransform(Y, residual_type = "pearson", 
-                                              size_factors = size_factors, overdispersion = disps,
-                                              overdispersion_shrinkage = FALSE)
+Y_pearson <- transformGamPoi::residual_transform(Y, residual_type = "pearson", 
+                                                 size_factors = size_factors, overdispersion = disps,
+                                                 overdispersion_shrinkage = FALSE)
 ```
 
 
 ```{r}
-Y_rq <- gamPoiTransform::gamPoiTransform(Y, residual_type = "randomized_quantile", 
-                                         size_factors = size_factors, overdispersion = disps,
-                                         overdispersion_shrinkage = FALSE)
+Y_rq <- transformGamPoi::residual_transform(Y, residual_type = "randomized_quantile", 
+                                            size_factors = size_factors, overdispersion = disps,
+                                            overdispersion_shrinkage = FALSE)
 ```
 
 
@@ -118,5 +118,14 @@ res
 
 ```{r}
 cowplot::save_plot("../output/size_factor_effect_after_vst.pdf", res, nrow = 1, ncol = 2.8, base_asp = 1)
+```
+
+
+
+
+# Session Info
+
+```{r}
+sessionInfo()
 ```
 
