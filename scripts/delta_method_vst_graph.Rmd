@@ -53,5 +53,10 @@ cowplot::save_plot("../output/graph_of_vsts.pdf", last_plot(), base_height = 3)
 
 
 
+# Session Info
+
+```{r}
+sessionInfo()
+```
 
 
