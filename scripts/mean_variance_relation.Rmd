@@ -36,11 +36,90 @@ gampoi_pred <- cross_df(list(mu = mu_sup, factor = 10^seq(-2, 2, by = 2))) %>%
   mutate(var = mu + mu^2 * factor) 
 ```
 
+# Prepare Data
+
+
+## Download data
+
+```{r}
+# Work around for some bug in zellkonverter
+# https://github.com/theislab/zellkonverter/issues/45
+setAs("dgRMatrix", to = "dgCMatrix", function(from){
+  as(as(from, "CsparseMatrix"), "dgCMatrix")
+})
+```
+
+
+```{r}
+if(! file.exists("../data/klein_2015.h5ad")){
+  download.file("https://data.caltech.edu/tindfiles/serve/f0d567c5-cea6-4a60-923e-e9fb4a4019e8/", "../data/klein_2015.h5ad")
+}
+if(! file.exists("../data/svensson_2017_1.h5ad")){
+  download.file("https://data.caltech.edu/tindfiles/serve/3f89d3a5-6ceb-486e-95d4-9bd3f511a706/", "../data/svensson_2017_1.h5ad")
+}
+if(! file.exists("../data/svensson_2017_2.h5ad")){
+  download.file("https://data.caltech.edu/tindfiles/serve/16dab9ea-4447-4e23-9aad-e68d052fd789/", "../data/svensson_2017_2.h5ad")
+}
+if(! file.exists("../data/nih3t3.h5ad")){
+  download.file("https://data.caltech.edu/tindfiles/serve/a448e98e-89cd-47b3-a134-803bbde29781/", "../data/nih3t3.h5ad")
+}
+if(! file.exists("../data/hek293t.h5ad")){
+  download.file("https://data.caltech.edu/tindfiles/serve/b2758046-9247-43ab-b8f0-68882b4f39a3/", "../data/hek293t.h5ad")
+}
+if(! file.exists("../data/nci-h1975.Rds")){
+  download.file("https://github.com/LuyiTian/sc_mixology/raw/master/data/csv/sc_10x.metadata.csv.gz", "../data/nci-h1975-metadata.csv.gz") 
+  meta <- read.csv("../data/nci-h1975-metadata.csv.gz")
+  meta$cell_id <- rownames(meta)
+  
+  download.file("https://github.com/LuyiTian/sc_mixology/raw/master/data/csv/sc_10x.count.csv.gz", "../data/nci-h1975.csv.gz") 
+  count_mat <- as.matrix(read.csv("../data/nci-h1975.csv.gz"))
+  gene_info <- AnnotationHub::AnnotationHub()[["AH53537"]] %>%
+    as.data.frame() %>%
+    group_by(gene_id) %>%
+    summarize(chromosome = dplyr::first(seqnames),
+              gene_name = dplyr::first(gene_name),
+              gene_biotype = dplyr::first(gene_biotype))
+  row_df <- tibble(gene_id = rownames(count_mat)) %>%
+    left_join((gene_info), by = "gene_id") %>%
+    as.data.frame()
+  saveRDS(SummarizedExperiment(S4Vectors::SimpleList(counts = count_mat), colData = meta, rowData = row_df), "../data/nci-h1975.Rds")
+}
+if(! file.exists( "../data/GSE126321.Rds")){
+  download.file("https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSE126321&format=file", "../data/GSE126321_RAW.tar")
+  dir.create("../data/GSE126321")
+  untar("../data/GSE126321_RAW.tar", exdir = "../data/GSE126321")
+  mat <- Matrix::readMM("../data/GSE126321/GSM3596320_GM18502_matrix.mtx.gz")
+  genes <- read_tsv("../data/GSE126321/GSM3596320_GM18502_genes.tsv.gz", col_names = c("gene_id", "gene_name"))
+  barcodes <- read_tsv("../data/GSE126321/GSM3596320_GM18502_barcodes.tsv.gz", col_names = "barcode") %>%
+    mutate(barcode = str_remove(barcode, "-1"))
+  qc <- read.delim("../data/GSE126321/GSM3596320_GM18502_cellQC.tsv.gz", sep = "\t") %>%
+    rownames_to_column("barcode")  %>%
+    as_tibble()
+  col_df <- left_join(barcodes, qc, by = "barcode") %>%
+    as.data.frame()
+  gene_info <- AnnotationHub::AnnotationHub()[["AH53537"]] %>%
+    as.data.frame() %>%
+    group_by(gene_id) %>%
+    summarize(chromosome = dplyr::first(seqnames),
+              gene_name = dplyr::first(gene_name),
+              gene_biotype = dplyr::first(gene_biotype))
+  row_df <- genes %>%
+    left_join((gene_info), by = "gene_id") %>%
+    transmute(gene_id, gene_name = gene_name.x, chromosome, gene_biotype) %>%
+    as.data.frame()
+  count_mat <- as(mat, "dgCMatrix")
+  rownames(count_mat) <- row_df$gene_id
+  colnames(count_mat) <- col_df$barcode
+  saveRDS(SummarizedExperiment(S4Vectors::SimpleList(counts = count_mat), colData = col_df, rowData = row_df), "../data/GSE126321.Rds")
+}
+
+```
+
 
 # Technical control experiments
 
 ```{r}
-se <- HighlyReplicatedRNASeq::SingleCell_RNA_solution("klein_2015")
+se <- zellkonverter::readH5AD("../data/klein_2015.h5ad")
 sf <- colSums2(assay(se))
 thres <- quantile(sf, 0.5) * c(1, 1.3)
 hist(sf, breaks = 50); abline(v = thres, col = "red", lwd = 2)
@@ -93,7 +172,7 @@ tech_p1 <- last_plot()
 
 
 ```{r}
-se <- HighlyReplicatedRNASeq::SingleCell_RNA_solution("svensson1_2017")
+se <- zellkonverter::readH5AD("../data/svensson_2017_1.h5ad")
 sf <- colSums2(assay(se))
 thres <- quantile(sf, 0.5) * c(1, 1.3)
 hist(sf, breaks = 50); abline(v = thres, col = "red", lwd = 2)
@@ -138,7 +217,7 @@ tech_p2 <- last_plot()
 
 
 ```{r}
-se <- HighlyReplicatedRNASeq::SingleCell_RNA_solution("svensson2_2017")
+se <- zellkonverter::readH5AD("../data/svensson_2017_2.h5ad")
 sf <- colSums2(assay(se))
 thres <- quantile(sf, 0.5) * c(1, 1.3)
 hist(sf, breaks = 50); abline(v = thres, col = "red", lwd = 2)
@@ -187,8 +266,7 @@ tech_p3 <- last_plot()
 
 
 ```{r}
-se <- HighlyReplicatedRNASeq::SingleCell_homogeneous_cells("TENx_NIH3T3")
-
+se <- zellkonverter::readH5AD("../data/nih3t3.h5ad")
 sf <- colSums2(assay(se))
 thres <- quantile(sf, 0.5) * c(1, 1.3)
 hist(sf, breaks = 50); abline(v = thres, col = "red", lwd = 2)
@@ -204,7 +282,7 @@ var <- rowVars(assay(se_red))
 
 
 ```{r}
-tibble(mu, var, cell_cycle_gene = rownames(se_red) %in% mouse_cell_cycle_genes) %>%
+tibble(mu, var, cell_cycle_gene = rownames(se_red) %in% paste0("mm10_", mouse_cell_cycle_genes)) %>%
   mutate(mu_pred = mu, mu_sq_pred = mu^2) %>%
   ggplot(aes(x = mu, y = var)) +
     geom_line(data = poisson_pred, aes(group = factor), color = "lightgray", size = 0.1) +
@@ -246,7 +324,7 @@ p1 <- last_plot()
 
 
 ```{r}
-se <- HighlyReplicatedRNASeq::SingleCell_homogeneous_cells("TENx_HEK293T")
+se <- zellkonverter::readH5AD("../data/hek293t.h5ad")
 
 sf <- colSums2(assay(se))
 thres <- quantile(sf, 0.5) * c(1, 1.3)
@@ -266,7 +344,7 @@ var <- rowVars(assay(se_red))
 
 
 ```{r}
-tibble(mu, var, cell_cycle_gene = rownames(se_red) %in% human_cell_cycle_genes) %>%
+tibble(mu, var, cell_cycle_gene = rownames(se_red) %in% paste0("hg19_", human_cell_cycle_genes)) %>%
   mutate(mu_pred = mu, mu_sq_pred = mu^2) %>%
   ggplot(aes(x = mu, y = var)) +
     geom_line(data = poisson_pred, aes(group = factor), color = "lightgray", size = 0.1) +
@@ -296,8 +374,7 @@ p2 <- last_plot()
 
 
 ```{r}
-# se <- HighlyReplicatedRNASeq::SingleCell_homogeneous_cells("TENx_NIH3T3")
-se_full <- HighlyReplicatedRNASeq::SingleCell_mixology()
+se_full <- readRDS("../data/nci-h1975.Rds")
 table(se_full$cell_line)
 ```
 
@@ -349,7 +426,7 @@ p3 <- last_plot()
 
 
 ```{r}
-se <- HighlyReplicatedRNASeq::SingleCell_lymphoblastoid_cell_line()
+se <- readRDS("../data/GSE126321.Rds")
 # table(se$cellPhase)
 # se <- se[, se$cellPhase == "S"]
 
@@ -418,4 +495,14 @@ cowplot::save_plot("../output/mean_variance_relation_homnogeneous_cells.pdf", p_
 ```
 
 
+
+
+
+
+
+# Session Info
+
+```{r}
+sessionInfo()
+```
 
