@@ -7,8 +7,30 @@ output: html_notebook
 ```{r}
 library(tidyverse)
 library(SingleCellExperiment)
+# Make sure that you use the forked version
+# devtools::install_github("const-ae/sctransform@offset_with_flexible_theta")
 library(sctransform)
 ```
+
+# Prepare Data
+
+```{r}
+# Work around for some bug in zellkonverter
+# https://github.com/theislab/zellkonverter/issues/45
+setAs("dgRMatrix", to = "dgCMatrix", function(from){
+  as(as(from, "CsparseMatrix"), "dgCMatrix")
+})
+```
+
+```{r}
+if(! file.exists("../data/nih3t3.h5ad")){
+  download.file("https://data.caltech.edu/tindfiles/serve/a448e98e-89cd-47b3-a134-803bbde29781/", "../data/nih3t3.h5ad")
+}
+if(! file.exists("../data/hek293t.h5ad")){
+  download.file("https://data.caltech.edu/tindfiles/serve/b2758046-9247-43ab-b8f0-68882b4f39a3/", "../data/hek293t.h5ad")
+}
+```
+
 
 
 Helper function, so that the content of the sctransform results stay in order
@@ -43,8 +65,8 @@ Load Data
 
 ```{r}
 load_data_fnc <- list(
-  NIH3T3 = function() HighlyReplicatedRNASeq::SingleCell_homogeneous_cells("TENx_NIH3T3"),
-  HEK239T = function() HighlyReplicatedRNASeq::SingleCell_homogeneous_cells("TENx_HEK293T"),
+  NIH3T3 = function() zellkonverter::readH5AD("../data/nih3t3.h5ad"),
+  HEK239T = function() zellkonverter::readH5AD("../data/hek293t.h5ad"),
   PBMC4k = function() TENxPBMCData::TENxPBMCData("pbmc4k"),
   Mesmer = function() scRNAseq::MessmerESCData(), 
   Zeisel = function() scRNAseq::ZeiselBrainData(),
@@ -201,6 +223,13 @@ cowplot::save_plot("../output/sctransform_beta_s_and_alpha_importance.pdf", res,
 
 
 
+
+
+# Session Info
+
+```{r}
+sessionInfo()
+```
 
 
  
