@@ -13,10 +13,14 @@ library(tidyverse)
 
 
 ```{r}
-download.file("https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSE124872&format=file&file=GSE124872%5Fraw%5Fcounts%5Fsingle%5Fcell%2ERData%2Egz", "../data/mouse_lung_single_cell.RData.gz")
-R.utils::gunzip("../data/mouse_lung_single_cell.RData.gz")
-download.file("https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSE124872&format=file&file=GSE124872%5FAngelidis%5F2018%5Fmetadata%2Ecsv%2Egz", "../data/mouse_lung_single_cell_metadata.csv.gz")
-R.utils::gunzip("../data/mouse_lung_single_cell_metadata.csv.gz")
+if(! file.exists("../data/mouse_lung_single_cell.RData")){
+  download.file("https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSE124872&format=file&file=GSE124872%5Fraw%5Fcounts%5Fsingle%5Fcell%2ERData%2Egz", "../data/mouse_lung_single_cell.RData.gz")
+  R.utils::gunzip("../data/mouse_lung_single_cell.RData.gz")
+}
+if(! file.exists("../data/mouse_lung_single_cell_metadata.csv")){
+  download.file("https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSE124872&format=file&file=GSE124872%5FAngelidis%5F2018%5Fmetadata%2Ecsv%2Egz", "../data/mouse_lung_single_cell_metadata.csv.gz")
+  R.utils::gunzip("../data/mouse_lung_single_cell_metadata.csv.gz")
+}
 ```
 
 
@@ -113,7 +117,7 @@ assay(subset_sce, "acosh") <- acosh(2 * alpha * t(t(counts(subset_sce)) / sf) + 
 
 ```{r}
 system.time(
-  assay(subset_sce, "pearson") <- transformGamPoi::transformGamPoi(as.matrix(assay(subset_sce, "counts")), 
+  assay(subset_sce, "pearson") <- transformGamPoi::residual_transform(as.matrix(assay(subset_sce, "counts")), 
                                                                    size_factors = sf, overdispersion = alpha,
                                                                    residual_type = "pearson", verbose = TRUE)
 )
@@ -121,7 +125,7 @@ system.time(
 
 ```{r}
 system.time(
-  assay(subset_sce, "rand_quantile") <- transformGamPoi::transformGamPoi(as.matrix(assay(subset_sce, "counts")), 
+  assay(subset_sce, "rand_quantile") <- transformGamPoi::residual_transform(as.matrix(assay(subset_sce, "counts")), 
                                                              size_factors = sf, overdispersion = alpha,
                                                              residual_type = "randomized_quantile", verbose = TRUE)
 )
@@ -267,6 +271,11 @@ cowplot::save_plot("../output/ageing_mice_gene_hists.pdf", last_plot(), nrow = 3
 
 
 
+# Session Info
+
+```{r}
+sessionInfo()
+```
 
 
 
