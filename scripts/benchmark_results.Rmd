@@ -120,7 +120,7 @@ cowplot::plot_grid(
   cowplot::plot_grid(p1 + guides(color = FALSE), p2 + guides(color = FALSE),
                    nrow = 1, align = "h"),
   cowplot::plot_grid(NULL, legend, NULL,
-                     nrow =1, rel_widths = c(1, 1, 1)),
+                     nrow =1, rel_widths = c(0.1, 1, 0.1)),
   ncol = 1, rel_heights = c(1, 0.1)
 )
 
@@ -272,5 +272,13 @@ cowplot::save_plot("../output/simulated_data_benchmark_pca_dimensions.pdf", last
 
 ```
 
+
+
+
+# Session Info
+
+```{r}
+sessionInfo()
+```
 
 
