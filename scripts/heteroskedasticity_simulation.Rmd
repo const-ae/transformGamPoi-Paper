@@ -108,3 +108,9 @@ cowplot::save_plot("../output/heteroskedasticity/hists.pdf", last_plot())
 The actual figure was arranged using Illustrator.
 
 
+
+# Session Info
+
+```{r}
+sessionInfo()
+```
