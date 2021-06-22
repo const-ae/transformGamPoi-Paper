@@ -135,6 +135,11 @@ var <- rowVars(assay(se_red))
 
 
 ```{r}
+glmGamPoi::glm_gp(se_red[mu > 1, ], overdispersion = "global", size_factors = sf_red, verbose = TRUE, on_disk = FALSE)$overdispersions[1]
+```
+
+
+```{r}
 tibble(mu, var, ercc_gene = str_starts(rownames(se_red), "ERCC-")) %>%
   mutate(mu_pred = mu, mu_sq_pred = mu^2) %>%
   ggplot(aes(x = mu, y = var)) +
@@ -186,6 +191,9 @@ mu <- rowMeans2(assay(se_red))
 var <- rowVars(assay(se_red))
 ```
 
+```{r}
+glmGamPoi::glm_gp(se_red[mu > 1, ], overdispersion = "global", size_factors = sf_red, verbose = TRUE, on_disk = FALSE)$overdispersions[1]
+```
 
 ```{r}
 tibble(mu, var, ercc_gene = str_starts(rownames(se_red), "ERCC-")) %>%
@@ -231,6 +239,9 @@ mu <- rowMeans2(assay(se_red))
 var <- rowVars(assay(se_red))
 ```
 
+```{r}
+glmGamPoi::glm_gp(se_red[mu > 1, ], overdispersion = "global", size_factors = sf_red, verbose = TRUE, on_disk = FALSE)$overdispersions[1]
+```
 
 ```{r}
 tibble(mu, var, ercc_gene = str_starts(rownames(se_red), "ERCC-")) %>%
@@ -280,6 +291,9 @@ mu <- rowMeans2(assay(se_red))
 var <- rowVars(assay(se_red))
 ```
 
+```{r}
+glmGamPoi::glm_gp(se_red[mu > 1, ], overdispersion = "global", size_factors = sf_red, verbose = TRUE, on_disk = FALSE)$overdispersions[1]
+```
 
 ```{r}
 tibble(mu, var, cell_cycle_gene = rownames(se_red) %in% paste0("mm10_", mouse_cell_cycle_genes)) %>%
@@ -341,7 +355,9 @@ var <- rowVars(assay(se_red))
 
 ```
 
-
+```{r}
+glmGamPoi::glm_gp(se_red[mu > 1, ], overdispersion = "global", size_factors = sf_red, verbose = TRUE, on_disk = FALSE)$overdispersions[1]
+```
 
 ```{r}
 tibble(mu, var, cell_cycle_gene = rownames(se_red) %in% paste0("hg19_", human_cell_cycle_genes)) %>%
@@ -394,6 +410,9 @@ mu <- rowMeans2(assay(se_red))
 var <- rowVars(assay(se_red))
 ```
 
+```{r}
+glmGamPoi::glm_gp(se_red[mu > 1, ], overdispersion = "global", size_factors = sf_red, verbose = TRUE, on_disk = FALSE)$overdispersions[1]
+```
 
 ```{r}
 tibble(mu, var, cell_cycle_gene = rownames(se_red) %in% human_cell_cycle_genes) %>%
@@ -443,6 +462,9 @@ mu <- rowMeans2(assay(se_red))
 var <- rowVars(assay(se_red))
 ```
 
+```{r}
+glmGamPoi::glm_gp(se_red[mu > 1, ], overdispersion = "global", size_factors = sf_red, verbose = TRUE, on_disk = FALSE)$overdispersions[1]
+```
 
 ```{r}
 tibble(mu, var, cell_cycle_gene = rownames(se_red) %in% human_cell_cycle_genes) %>%
