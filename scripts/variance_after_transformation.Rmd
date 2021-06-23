@@ -1,0 +1,232 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+
+```{r}
+library(SingleCellExperiment)
+library(tidyverse)
+`%|%` <- rlang::`%|%`
+set.seed(1)
+```
+
+
+
+```{r}
+# Work around for some bug in zellkonverter
+# https://github.com/theislab/zellkonverter/issues/45
+setAs("dgRMatrix", to = "dgCMatrix", function(from){
+  as(as(from, "CsparseMatrix"), "dgCMatrix")
+})
+```
+
+```{r}
+sce <- zellkonverter::readH5AD("../data/nih3t3.h5ad")
+assay(sce, "counts") <- assay(sce, "X")
+sf <- colSums2(assay(sce))
+```
+
+
+```{r}
+sf <- colSums2(counts(sce))
+sf <- sf / mean(sf)
+
+alpha <- 0.12
+```
+
+
+```{r}
+mu_gene_expr <- rowMeans2(assay(sce))
+# Sample genes uniformly along log mean expression
+sel_genes <- tapply(seq_along(mu_gene_expr), santoku::chop_evenly(log(mu_gene_expr), intervals = 50), function(x){
+  sample(x, size = min(length(x), 50))
+}) %>%
+  unlist() %>%
+  unname()
+
+length(sel_genes)
+```
+
+
+```{r}
+dim(sce)
+
+sel_cells <- sample(which(colSums2(assay(sce), rows = sel_genes) > 10), 1000)
+sel_genes <- sel_genes[rowSums2(assay(sce), rows = sel_genes, cols = sel_cells) > 0]
+
+sf_subset <- sf[sel_cells]
+subset_sce <- sce[sel_genes, sel_cells]
+dim(subset_sce)
+```
+
+
+
+```{r}
+system.time(
+  subset_sce <- scuttle::logNormCounts(subset_sce)
+)
+```
+
+
+```{r}
+system.time(
+  assay(subset_sce, "logp_alpha") <- transformGamPoi::shifted_log_transform(subset_sce, overdispersion = alpha, size_factors = sf_subset)
+)
+```
+
+
+```{r}
+system.time(
+  assay(subset_sce, "acosh") <- transformGamPoi::acosh_transform(subset_sce, overdispersion = alpha, size_factors = sf_subset)
+)
+```
+
+
+```{r}
+system.time(
+  assay(subset_sce, "pearson") <- transformGamPoi::residual_transform(as.matrix(assay(subset_sce, "counts")), 
+                                                                   size_factors = sf_subset, overdispersion = alpha,
+                                                                   residual_type = "pearson", verbose = TRUE)
+)
+```
+
+```{r}
+system.time(
+  assay(subset_sce, "rand_quantile") <- transformGamPoi::residual_transform(as.matrix(assay(subset_sce, "counts")), 
+                                                             size_factors = sf_subset, overdispersion = alpha,
+                                                             residual_type = "randomized_quantile", verbose = TRUE)
+)
+```
+
+
+```{r}
+run_sanity <- function(x, variance_min = 0.01, variance_max = 20, n_bins = 116, n_threads = 1){
+  stopifnot(is.matrix(x))
+  stopifnot(all(colSums2(x) > 0))
+  stopifnot(all(rowSums2(x) > 0))
+  # write x to a file
+  input <- tempfile(pattern = "matrix", fileext = ".tsv")
+  output_dir <- file.path(tempdir(), paste0("sanity_output_", paste0(sample(letters, 7, replace = TRUE), collapse = "")))
+  dir.create(output_dir)
+  print(paste0("Output dir: ", output_dir))
+  
+  if(is.null(rownames(x))){
+    rownames(x) <- paste0("Gene_", seq_len(nrow(x)))
+  }
+  if(is.null(colnames(x))){
+    colnames(x) <- paste0("Cell_", seq_len(ncol(x)))
+  }
+  readr::write_tsv(tibble::as_tibble(x, rownames = "GeneID"), input)
+  
+  code <- system2("/Users/ahlmanne/prog/experiments/Sanity/bin/Sanity", args = c(paste0("--file ", input),
+                                                                                 paste0("--destination ", output_dir),
+                                                                                 paste0("--variance_min ", variance_min),
+                                                                                 paste0("--variance_max ", variance_max),
+                                                                                 paste0("--number_of_bins ", n_bins),
+                                                                                 paste0("--n_threads ", n_threads),
+                                                                                 "--extended_output true"))
+  if(code != 0){
+    stop("Sanity failed with status ", code)
+  }
+  
+  
+  res <- readr::read_tsv(file.path(output_dir, "log_transcription_quotients.txt"), col_types = readr::cols()) 
+  mat <- as.matrix(res[,-1,drop=FALSE])
+  rownames(mat) <- res[[1]]
+  colnames(mat) <- colnames(res)[-1]
+  
+  errror_bars_df <- readr::read_tsv(file.path(output_dir, "ltq_error_bars.txt"), col_types = readr::cols()) 
+  error_bars <- as.matrix(errror_bars_df[,-1,drop=FALSE])
+  rownames(error_bars) <- errror_bars_df[[1]]
+  colnames(error_bars) <- colnames(errror_bars_df)[-1]
+  
+  
+  list(mean = mat, sd = error_bars, outdir = output_dir)
+}
+
+system.time(
+  sane_res <- run_sanity(as.matrix(assay(subset_sce)))
+)
+
+```
+
+
+
+```{r make_plot, fig.width=12, fig.height=7}
+color_map <-  c("Delta method VST" = "#022B3A", "Residual VST" = "#1F7A8C", "Sanity" = "#A3C9A8",
+                "other" = "grey", "Raw Counts" = "#985277")
+
+method_labeller <- c("logp1" = "log(x+1)", "logp_alpha" = "log(x+1/(4*alpha))", "acosh" = "acosh(2*alpha*x+1)",
+                   "pearson" = "Pearson~Residulas", "rand_quantile" = "Rand.~Quantile~Residuals",
+                   "sanity" = "Sanity", counts = "Raw~Counts")
+
+limits <- tibble(counts = 16000, logp1 = 10.5, logp_alpha = 10.5, acosh = 10.5,
+                 pearson = 10.5, rand_quantile = 10.5, sanity = 4) %>%
+  pivot_longer(everything(), names_to = "transformation", values_to = "ceiling")
+
+res <- tibble(gene = rownames(subset_sce),
+       count_mean = rowMeans2(assay(subset_sce, "counts")),
+       counts = as.matrix(assay(subset_sce, "counts")),
+       logp1 = as.matrix(assay(subset_sce, "logcounts")),
+       logp_alpha = as.matrix(assay(subset_sce, "logp_alpha")),
+       acosh = as.matrix(assay(subset_sce, "acosh")),
+       rand_quantile = as.matrix(assay(subset_sce, "rand_quantile")),
+       pearson = as.matrix(assay(subset_sce, "pearson")),
+       sanity = matrix(rnorm(n = nrow(subset_sce) * ncol(subset_sce), mean = sane_res$mean, sd = sane_res$sd), nrow = nrow(subset_sce), ncol = ncol(subset_sce))) %>%
+       # sanity = sane_res$mean) %>%   
+  pivot_longer(c(counts, logp1, logp_alpha, acosh, rand_quantile, pearson, sanity), names_to = "transformation", values_to = "value")  %>%
+  mutate(var = rowVars(value)) %>%
+  dplyr::select(-value) %>%
+  mutate(transformation_label = as.factor(method_labeller[transformation])) %>%
+  mutate(transformation = factor(transformation, levels  = c("pearson", "rand_quantile", "sanity", "logp1", "logp_alpha", "acosh", "counts"))) %>%
+  mutate(transformation_label = fct_reorder(transformation_label, as.numeric(transformation))) %>%
+  mutate(method_type = case_when(
+    transformation == "counts" ~ "Raw Counts",
+    transformation %in% c("logp1", "logp_alpha", "acosh") ~ "Delta method VST",
+    transformation %in% c("pearson", "rand_quantile") ~ "Residual VST",
+    transformation == "sanity" ~ "Sanity",
+    TRUE ~ NA_character_
+  )) %>%
+  left_join(limits) %>%
+  mutate(var = ifelse(var > ceiling, Inf, var)) %>%
+  ggplot(aes(x = count_mean, y = var)) +
+    geom_hline(yintercept = 1) +
+    geom_point(aes(color = method_type), size = 0.5) +
+    geom_blank(aes(x = 1, y = ceiling)) +
+    facet_wrap(vars(transformation_label), scales = "free", nrow = 3, labeller = label_parsed)  +
+    scale_color_manual(values = color_map, breaks = c("Raw Counts", "Delta method VST", "Residual VST", "Sanity")) +
+    scale_x_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
+                  labels = scales::trans_format("log10", scales::math_format(10^.x))) +
+    scale_y_continuous(limits = c(0, NA),expand = expansion(mult = c(0, 0.05)), 
+                       breaks = function(x){
+                          signif_dig <- 1
+                          ord <- floor(log10(max(x))) 
+                          c(0, floor(max(x) / 10^(ord-signif_dig+1)) * 10^(ord-signif_dig+1))
+                        }) +
+    coord_cartesian(clip = "off") +
+    labs(x = expression(log[10]~of~gene~means), y = "variance after transformation") +
+    guides(color = guide_legend(title = "", override.aes = list(size = 2))) +
+    cowplot::theme_cowplot() +
+    theme(legend.position = "bottom")
+    NULL
+
+res
+
+cowplot::save_plot("../output/variance_after_transformation.pdf", res, nrow = 3, ncol = 3, base_height = 2, base_asp = 2)
+```
+
+
+
+
+
+
+# Session Info
+
+```{r}
+sessionInfo()
+```
+
+
+
