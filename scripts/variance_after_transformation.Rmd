@@ -162,8 +162,8 @@ method_labeller <- c("logp1" = "log(x+1)", "logp_alpha" = "log(x+1/(4*alpha))", 
                    "pearson" = "Pearson~Residulas", "rand_quantile" = "Rand.~Quantile~Residuals",
                    "sanity" = "Sanity", counts = "Raw~Counts")
 
-limits <- tibble(counts = 16000, logp1 = 10.5, logp_alpha = 10.5, acosh = 10.5,
-                 pearson = 10.5, rand_quantile = 10.5, sanity = 4) %>%
+limits <- tibble(counts = 16000, logp1 = 7, logp_alpha = 7, acosh = 7,
+                 pearson = 7, rand_quantile = 7, sanity = 7) %>%
   pivot_longer(everything(), names_to = "transformation", values_to = "ceiling")
 
 res <- tibble(gene = rownames(subset_sce),
