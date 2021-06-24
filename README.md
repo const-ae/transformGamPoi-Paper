@@ -9,7 +9,7 @@ Each figure was created using an Rmarkdown notebook. To see the respective code 
 * [Figure 4, S6, S7](https://htmlpreview.github.io/?https://github.com/const-ae/transformGamPoi-Paper/blob/master/scripts/benchmark_results.nb.html)
 * [Figure S1](https://htmlpreview.github.io/?https://github.com/const-ae/transformGamPoi-Paper/blob/master/scripts/mean_variance_relation.nb.html)
 * [Figure S2](https://htmlpreview.github.io/?https://github.com/const-ae/transformGamPoi-Paper/blob/master/scripts/size_factor_confounding_effect.nb.html)
-* [Figure S3](https://github.com/const-ae/transformGamPoi-Paper/blob/master/scripts/variance_after_transformation.nb.html)
+* [Figure S3](https://htmlpreview.github.io/?https://github.com/const-ae/transformGamPoi-Paper/blob/master/scripts/variance_after_transformation.nb.html)
 * [Figure S4](https://htmlpreview.github.io/?https://github.com/const-ae/transformGamPoi-Paper/blob/master/scripts/sctransform_beta_s_and_alpha_importance.nb.html)
 * [Figure S5](https://htmlpreview.github.io/?https://github.com/const-ae/transformGamPoi-Paper/blob/master/scripts/randomized_quantile_residuals.nb.html)
 
