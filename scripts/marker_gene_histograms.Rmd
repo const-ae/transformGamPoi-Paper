@@ -192,7 +192,7 @@ method_labeller <- c("logp1" = "log(x+1)", "logp_alpha" = "log(x+1/(4*alpha))", 
 
 
 
-make_gene_hist2 <- function(gene_id, gene_name, cell_types_of_interest, show_facet_label){
+make_gene_hist2 <- function(gene_id, cell_types_of_interest, show_facet_label){
   
   cells_of_interest <- subset_sce$cell_id[subset_sce$cell_type %in% cell_types_of_interest]
   other_cells <- sample(setdiff(subset_sce$cell_id, cells_of_interest), size = length(cells_of_interest), replace = FALSE)
@@ -212,25 +212,18 @@ make_gene_hist2 <- function(gene_id, gene_name, cell_types_of_interest, show_fac
     mutate(transformation_label = as.factor(method_labeller[transformation])) %>%
     mutate(transformation = factor(transformation, levels  = c("counts", "logp1", "logp_alpha", "acosh", "pearson", "rand_quantile", "sanity"))) %>%
     mutate(transformation_label = fct_reorder(transformation_label, as.numeric(transformation))) %>%
-    mutate(method_type = case_when(
-      transformation == "counts" ~ "Raw Counts",
-      transformation %in% c("logp1", "logp_alpha", "acosh") ~ "Delta method VST",
-      transformation %in% c("pearson", "rand_quantile") ~ "Residual VST",
-      transformation == "sanity" ~ "Sanity",
-      TRUE ~ NA_character_
-    )) %>%
-    mutate(fill_color = ifelse(! cell_type_oi, "other", method_type)) %>%
-    mutate(fill_color = fct_relevel(as.factor(fill_color), "other", after = 0)) %>%
     ggplot(aes(x = value)) +
-      geom_histogram(aes(fill = fill_color), bins = 30,  alpha = 0.8, position = "identity") +
+      # geom_histogram(aes(fill = fill_color), bins = 30,  alpha = 0.8, position = "identity") +
+      geom_histogram(aes(fill = cell_type_oi), bins = 30, position = "identity", alpha = 0.6) +
       facet_wrap(vars(transformation_label), scales = "free", nrow = 1, labeller = label_parsed) +
       scale_y_continuous(expand = expansion(mult = c(0.015, NA)), breaks = function(x){
         ord <- floor(log10(max(x)))
         c(0, floor(max(x) / 10^ord) * 10^ord)
       }) +
       scale_x_continuous(n.breaks = 4) +
-      # scale_fill_manual(values = c("FALSE"="grey", "TRUE"="#e88420")) +
-      scale_fill_manual(values = color_map, breaks = c("Raw Counts", "Delta method VST", "Residual VST", "Sanity")) +
+      scale_fill_manual(values = c("FALSE"="grey", "TRUE"="#985277"),
+                        labels = c("FALSE"="other cells",  "TRUE"="cells of the cell type associated with the marker gene")) +
+      # scale_fill_manual(values = color_map, breaks = c("Raw Counts", "Delta method VST", "Residual VST", "Sanity")) +
       coord_cartesian(clip = "off") +
       labs(x = "", y = gene_id) +
       cowplot::theme_cowplot() +
@@ -251,7 +244,8 @@ hists <- list(make_gene_hist2(gene_id = "Sftpc", cell_types_of_interest = c("Typ
 
 legend <- cowplot::get_legend(hists[[1]] + theme(legend.position = "bottom") +
                                 guides(fill = guide_legend(title = "", override.aes = list(size = 3, alpha = 1),
-                                                            label.hjust = 0, label.theme =  element_text(size = 8))))
+                                                           label.hjust = 0, label.theme =  element_text(size = 8),
+                                                           reverse = TRUE)))
 
 title <- cowplot::ggdraw() +
   cowplot::draw_figure_label("Marker Gene Distribution after Transformation",
