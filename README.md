@@ -1,6 +1,8 @@
 # transformGamPoi-Paper
 
-This repository contains the code to generate the figures of our paper 'Transformation and Preprocessing of Single-Cell RNA-Seq Data'. The R package `transformGamPoi` is at https://github.com/const-ae/transformGamPoi.
+This repository contains the code to generate the figures of our paper 'Transformation and Preprocessing of Single-Cell RNA-Seq Data' on bioRxiv https://www.biorxiv.org/content/10.1101/2021.06.24.449781v1. 
+
+The accompanying R package `transformGamPoi` is at https://github.com/const-ae/transformGamPoi.
 
 Each figure was created using an Rmarkdown notebook. To see the respective code and output go to
 * [Figure 1](https://htmlpreview.github.io/?https://github.com/const-ae/transformGamPoi-Paper/blob/master/scripts/heteroskedasticity_simulation.nb.html)
