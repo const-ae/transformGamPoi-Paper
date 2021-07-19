@@ -54,81 +54,80 @@ cowplot::save_plot("../output/graph_of_vsts.pdf", last_plot(), base_height = 3)
 
 
 
-```{r, fig.width = 6, fig.height=4}
-xg <- seq(2, 17, length.out = 1001)
+```{r, make_delta_method_plot}
+set.seed(1)
+pdf("../output/delta_method.pdf", width = 3, height = 2.0)
+par(mar = c(0,0,0,0), oma = c(0,0,0,0))
+
+xg <- seq(0, 5, length.out = 1001)
 f <- function(x){
-  50 * x - 7 * (x-5)^2 + 0.5 * (x-3)^3 - 10 * x^1.4
+  1/sqrt(0.1) * acosh(2 * 0.1 * x + 1)
 }
 f_deriv <- function(x){
-  50 - 7 * 2 * (x-5) + 0.5 * 3 * (x-3)^2 - 10 * 1.4 * x^0.4
+  1/sqrt(x + 0.1 * x^2)
 }
+m1 <- 2.2
+xg1 <- seq(m1-0.9, m1+0.9, length.out = 1001)
+draws <- qnorm(seq(0.05, 0.95, by = 0.05), mean = m1, sd = 0.2)
+phantom_draws1 <- rnorm(n = 1e4, mean = m1, sd = 0.2)
+out_dens_left <- density(f(phantom_draws1), adjust = 3, from = f(m1) - 0.8 * f_deriv(m1), to = f(m1) + 0.8 * f_deriv(m1))
+out_dens_bottom <- density(phantom_draws1, adjust = 3, from = m1 - 0.8, to = m1 + 0.8)
+
 y <- f(xg)
-
-min_x <- 2
-min_y <- f(2)
-
-plot(c(min_x-4, 17), y = c(min_y-200, f(17)), type = "n", xlab = "", ylab = "", xaxt = "n", yaxt = "n")
-
-
-m1 <- 7
-xg1 <- seq(m1-2, m1+2, length.out = 1001)
 y_lin1 <- f(m1) - f_deriv(m1) * m1 + xg1 * f_deriv(m1)
 
+min_x <- 0
+min_y <- 0
+dens_offset_bottom <- 0.01
+dens_offset_left <- 0.01
 
-m2 <- 14
-xg2 <- seq(m2-2, m2+2, length.out = 1001)
-y_lin2 <- f(m2) - f_deriv(m2) * m2 + xg2 * f_deriv(m2)
+# plot(c(min_x-2, 6), y = c(min_y-2, f(6)+0.2), type = "n", xlab = "", ylab = "", xaxt = "n", yaxt = "n", bty="n")
+plot(c(min_x-2, max(xg)), y = c(min_y-2, f(max(xg))+0.2), type = "n", xlab = "", ylab = "", xaxt = "n", yaxt = "n", bty="n")
 
-
-draws1 <- rnorm(n = 30, mean = m1, sd = 0.6)
-draws2 <- rnorm(n = 30, mean = m2, sd = 0.6)
-phantom_draws1 <- rnorm(n = 1e4, mean = m1, sd = 0.6)
-phantom_draws2 <- rnorm(n = 1e4, mean = m2, sd = 0.6)
+# Draw new axis
+segments(x0 = min_x, y0 = min_y, x1 = max(xg), y1 = min_y)
+segments(x0 = min_x, y0 = min_y, x1 = min_x, y1 = f(max(xg)))
 
 # Draw distribution lines
-segments(x0 = draws1, y0 = min_y, x1 = draws1, y1 = f(draws1), col = scales::alpha("#8210b3", 0.1), lwd = 0.3)
-segments(x0 = min_x, y0 = f(draws1), x1 = draws1, y1 = f(draws1), col = scales::alpha("#8210b3", 0.1), lwd = 0.3)
-segments(x0 = draws2, y0 = min_y, x1 = draws2, y1 = f(draws2), col = scales::alpha("#8210b3", 0.1), lwd = 0.3)
-segments(x0 = min_x, y0 = f(draws2), x1 = draws2, y1 = f(draws2), col = scales::alpha("#8210b3", 0.1), lwd = 0.3)
+# Vertical
+segments(x0 = draws, y0 = min_y - dens_offset_bottom - approxfun(out_dens_bottom)(draws) * 0.5, x1 = draws, 
+         y1 = f(draws), col = scales::alpha("#8210b3", 0.8), lwd = 0.3)
+segments(x0 = m1, y0 = min_y - dens_offset_bottom - approxfun(out_dens_bottom)(m1) * 0.5, x1 = m1, 
+         y1 = f(m1), col = "black", lwd = 0.3)
+# Horizontal
+segments(x0 = min_x - dens_offset_left - approxfun(out_dens_left)(f(draws)) * 0.2, y0 = f(draws), 
+         x1 = draws, y1 = f(draws), col = scales::alpha("#8210b3", 0.8), lwd = 0.3)
+segments(x0 = min_x - dens_offset_left - approxfun(out_dens_left)(f(m1)) * 0.2, y0 = f(m1), 
+         x1 = m1, y1 = f(m1), col = "black", lwd = 0.3)
 
-
-# Draw derivatives
-lines(xg1, y_lin1, col = "#333333", lwd = 5)
-lines(xg2, y_lin2, col = "#333333", lwd = 5)
 
 # Draw main lines
-lines(xg, y, type = "l", col = "#ad1c0c", lwd = 5)
+lines(xg, y, type = "l", col = "#ad1c0c", lwd = 2.5, asp = 1)
+
+# Draw derivatives
+lines(xg1, y_lin1, col = scales::alpha("#333333", 0.8), lwd = 2)
 
 # Draw approx points
-points(m1, f(m1), pch = 16)
-points(m2, f(m2), pch = 16)
-
+points(m1, f(m1), pch = 16, cex = 0.2)
 
 # draw bottom dens
-out_dens1 <- density(phantom_draws1, adjust = 3, from = m1 - 3, to = m1 + 3)
-lines(out_dens1$x, min_y-out_dens1$y * 150, lwd = 2, col = "#8210b3")
-out_dens2 <- density(phantom_draws2, adjust = 3, from = m2 - 3, to = m2 + 3)
-lines(out_dens2$x, min_y-out_dens2$y * 150, lwd = 2, col = "#8210b3")
+lines(out_dens_bottom$x, min_y - dens_offset_bottom - out_dens_bottom$y * 0.5, lwd = 2, col = "#8210b3")
 
 # draw left dens
-out_dens3 <- density(f(phantom_draws1), adjust = 3, from = 150, to = 240)
-lines(min_x-out_dens3$y * 50, y = out_dens3$x, lwd = 2, col = "#8210b3")
-out_dens4 <- density(f(phantom_draws2), adjust = 3, from = 260, to = 550)
-lines(min_x-out_dens4$y * 50, y = out_dens4$x, lwd = 2, col = "#8210b3")
+lines(min_x - dens_offset_left - out_dens_left$y * 0.2, y = out_dens_left$x, lwd = 2, col = "#8210b3")
 
-# draw left according to delta
-theo_g1 <- seq(150, 240, length.out = 1001)
-theo1 <- dnorm(theo_g1, mean = f(m1), sd = f_deriv(m1) * 0.6)
-lines(min_x-theo1 * 50, theo_g1, lwd = 2, col = scales::alpha("black", 1), lty = "dotted")
-theo_g2 <- seq(260, 550, length.out = 1001)
-theo2 <- dnorm(theo_g2, mean = f(m2), sd = f_deriv(m2) * 0.6)
-lines(min_x-theo2 * 50, theo_g2, lwd = 2, col = scales::alpha("black", 1), lty = "dotted")
+# Draw std bar bottom
+segments(x0 = qnorm(0.1, m1, sd=0.2), x1 = qnorm(0.9, m1, sd = 0.2), 
+         y0 = min_y - dens_offset_bottom - max(out_dens_bottom$y) * 0.5 - 0.1, 
+         y1 = min_y - dens_offset_bottom - max(out_dens_bottom$y) * 0.5 - 0.1,
+         lwd = 1.5)
+# Draw std bar left
+segments(y0 = qnorm(0.1, f(m1), sd=f_deriv(m1) * 0.2), y1 = qnorm(0.9, f(m1), sd = f_deriv(m1) * 0.2), 
+         x0 = min_x - dens_offset_left - max(out_dens_left$y) * 0.2 - 0.1, 
+         x1 = min_x - dens_offset_left - max(out_dens_left$y) * 0.2 - 0.1,
+         lwd = 1.5)
 
-# axis(1, at=, labels=, pos=0, lty=, col=, las=, tck=)
-segments(x0 = min_x, y0 = min_y, x1 = 17, y1 = min_y)
-segments(x0 = min_x, y0 = min_y, x1 = min_x, y1 = 700)
-
-
+dev.off()
 
 ```
 
