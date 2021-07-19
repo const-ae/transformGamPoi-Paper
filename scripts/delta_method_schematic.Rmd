@@ -1,0 +1,85 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+
+
+
+
+```{r, make_delta_method_plot}
+set.seed(1)
+pdf("../output/delta_method.pdf", width = 3, height = 2.0)
+par(mar = c(0,0,0,0), oma = c(0,0,0,0))
+
+xg <- seq(0, 5, length.out = 1001)
+f <- function(x){
+  1/sqrt(0.1) * acosh(2 * 0.1 * x + 1)
+}
+f_deriv <- function(x){
+  1/sqrt(x + 0.1 * x^2)
+}
+m1 <- 2.2
+xg1 <- seq(m1-0.9, m1+0.9, length.out = 1001)
+draws <- qnorm(seq(0.05, 0.95, by = 0.05), mean = m1, sd = 0.2)
+phantom_draws1 <- rnorm(n = 1e4, mean = m1, sd = 0.2)
+out_dens_left <- density(f(phantom_draws1), adjust = 3, from = f(m1) - 0.8 * f_deriv(m1), to = f(m1) + 0.8 * f_deriv(m1))
+out_dens_bottom <- density(phantom_draws1, adjust = 3, from = m1 - 0.8, to = m1 + 0.8)
+
+y <- f(xg)
+y_lin1 <- f(m1) - f_deriv(m1) * m1 + xg1 * f_deriv(m1)
+
+min_x <- 0
+min_y <- 0
+dens_offset_bottom <- 0.01
+dens_offset_left <- 0.01
+
+plot(c(min_x-2, max(xg)), y = c(min_y-2, f(max(xg))+0.2), type = "n", xlab = "", ylab = "", xaxt = "n", yaxt = "n", bty="n")
+
+# Draw new axis
+segments(x0 = min_x, y0 = min_y, x1 = max(xg), y1 = min_y)
+segments(x0 = min_x, y0 = min_y, x1 = min_x, y1 = f(max(xg)))
+
+# Draw distribution lines
+# Vertical
+segments(x0 = draws, y0 = min_y - dens_offset_bottom - approxfun(out_dens_bottom)(draws) * 0.5, x1 = draws, 
+         y1 = f(draws), col = scales::alpha("#8210b3", 0.3), lwd = 0.3)
+segments(x0 = m1, y0 = min_y - dens_offset_bottom - approxfun(out_dens_bottom)(m1) * 0.5, x1 = m1, 
+         y1 = f(m1), col = "black", lwd = 0.3)
+# Horizontal
+segments(x0 = min_x - dens_offset_left - approxfun(out_dens_left)(f(draws)) * 0.2, y0 = f(draws), 
+         x1 = draws, y1 = f(draws), col = scales::alpha("#8210b3", 0.3), lwd = 0.3)
+segments(x0 = min_x - dens_offset_left - approxfun(out_dens_left)(f(m1)) * 0.2, y0 = f(m1), 
+         x1 = m1, y1 = f(m1), col = "black", lwd = 0.3)
+
+
+# Draw main lines
+lines(xg, y, type = "l", col = "#ad1c0c", lwd = 2.5, asp = 1)
+
+# Draw derivatives
+lines(xg1, y_lin1, col = scales::alpha("#333333", 0.8), lwd = 2)
+
+# Draw approx points
+points(m1, f(m1), pch = 16, cex = 0.3)
+
+# draw bottom dens
+lines(out_dens_bottom$x, min_y - dens_offset_bottom - out_dens_bottom$y * 0.5, lwd = 2, col = "#8210b3")
+
+# draw left dens
+lines(min_x - dens_offset_left - out_dens_left$y * 0.2, y = out_dens_left$x, lwd = 2, col = "#8210b3")
+
+# Draw std bar bottom
+segments(x0 = qnorm(0.1, m1, sd=0.2), x1 = qnorm(0.9, m1, sd = 0.2), 
+         y0 = min_y - dens_offset_bottom - max(out_dens_bottom$y) * 0.5 - 0.1, 
+         y1 = min_y - dens_offset_bottom - max(out_dens_bottom$y) * 0.5 - 0.1,
+         lwd = 1.5)
+# Draw std bar left
+segments(y0 = qnorm(0.1, f(m1), sd=f_deriv(m1) * 0.2), y1 = qnorm(0.9, f(m1), sd = f_deriv(m1) * 0.2), 
+         x0 = min_x - dens_offset_left - max(out_dens_left$y) * 0.2 - 0.1, 
+         x1 = min_x - dens_offset_left - max(out_dens_left$y) * 0.2 - 0.1,
+         lwd = 1.5)
+
+dev.off()
+
+```
