@@ -8,21 +8,41 @@ output: html_notebook
 ```{r}
 library(tidyverse)
 library(tidylog)
-```
-
-```{r}
 theme_set(cowplot::theme_cowplot())
 ```
 
 
-```{r, fig.width=5, fig.height=3}
+
+```{r}
+p1 <- cross_df(list(x = seq(0, 104), mu = c(4, 16, 64))) %>%
+  mutate(density = dpois(x, lambda = mu)) %>%
+  ggplot(aes(x = x, y = density, fill = as.factor(mu)))+
+    # geom_histogram(position = "identity", alpha = 0.8, breaks = seq(-1, 101) + 0.5) +
+    geom_col(position = "identity", alpha = 0.8) +
+    geom_vline(xintercept = c(4, 16, 64)) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.2))) +
+    scale_x_continuous(breaks = seq(0, 100, by = 25), expand = expansion(add = c(0.5, 0))) +
+    guides(fill = "none") +
+    labs(x = "Counts", y = "") +
+    theme(axis.line.y = element_blank(),
+          axis.text.y = element_blank(),
+          axis.ticks.y = element_blank(),
+          axis.title.y = element_blank(),
+          plot.margin = unit(c(5, 3, 5, 3), "pt"))
+
+p1
+```
+
+
+
+```{r}
 sqrt_pos <- 17
 acosh_pos <- 16
 log_pos <- 15
 
 alpha <- 0.1
 
-tibble(x = seq(0, 40, l = 1001)) %>%
+p2 <- tibble(x = seq(0, 40, l = 1001)) %>%
   mutate(sqrt = 2 * sqrt(alpha * x),
          log = log(x + 1/(4*alpha)) + log(4 * alpha),
          acosh = acosh(2 * alpha * x + 1)) %>%
@@ -39,98 +59,22 @@ tibble(x = seq(0, 40, l = 1001)) %>%
              hjust = 0, vjust = -0.2, size = 5, angle = 10) +
     annotate(geom = "text", x = log_pos, y = log(4  * alpha * log_pos + 1), label = expression(log(y+1/(4*alpha))+a),
              hjust = 0, vjust = 1.2, size = 5, angle = 8) +
-    annotate(geom = "text", x = 28, y = 0.15, hjust = 1, vjust = 0, label = "y", size = 4, color = "darkgrey") +  
-    annotate(geom = "text", x = 0.3, y = 3.7, hjust = 0, vjust = 1, label = "g(y)", size = 4, color = "darkgrey") +  
+    # annotate(geom = "text", x = 28, y = 0.15, hjust = 1, vjust = 0, label = "y", size = 4, color = "darkgrey") +  
+    # annotate(geom = "text", x = 0.3, y = 3.7, hjust = 0, vjust = 1, label = "g(y)", size = 4, color = "darkgrey") +  
     coord_cartesian(ylim = c(0, 3.4), xlim = c(0, 28), clip = "off") +
     scale_y_continuous(expand = expansion(add = c(0, 0.3))) +
     scale_x_continuous(expand = expansion(0)) +
-    theme(axis.title.x = element_blank(),
-          axis.title.y = element_blank())
-    # labs(y = "", x = "")
+    # theme(axis.title.x = element_blank(),
+    #       axis.title.y = element_blank())
+    labs(x = "y", y = "g(y)")
 
-cowplot::save_plot("../output/graph_of_vsts.pdf", last_plot(), base_height = 3)
+p2
 ```
 
-
-
-
-```{r, make_delta_method_plot}
-set.seed(1)
-pdf("../output/delta_method.pdf", width = 3, height = 2.0)
-par(mar = c(0,0,0,0), oma = c(0,0,0,0))
-
-xg <- seq(0, 5, length.out = 1001)
-f <- function(x){
-  1/sqrt(0.1) * acosh(2 * 0.1 * x + 1)
-}
-f_deriv <- function(x){
-  1/sqrt(x + 0.1 * x^2)
-}
-m1 <- 2.2
-xg1 <- seq(m1-0.9, m1+0.9, length.out = 1001)
-draws <- qnorm(seq(0.05, 0.95, by = 0.05), mean = m1, sd = 0.2)
-phantom_draws1 <- rnorm(n = 1e4, mean = m1, sd = 0.2)
-out_dens_left <- density(f(phantom_draws1), adjust = 3, from = f(m1) - 0.8 * f_deriv(m1), to = f(m1) + 0.8 * f_deriv(m1))
-out_dens_bottom <- density(phantom_draws1, adjust = 3, from = m1 - 0.8, to = m1 + 0.8)
-
-y <- f(xg)
-y_lin1 <- f(m1) - f_deriv(m1) * m1 + xg1 * f_deriv(m1)
-
-min_x <- 0
-min_y <- 0
-dens_offset_bottom <- 0.01
-dens_offset_left <- 0.01
-
-# plot(c(min_x-2, 6), y = c(min_y-2, f(6)+0.2), type = "n", xlab = "", ylab = "", xaxt = "n", yaxt = "n", bty="n")
-plot(c(min_x-2, max(xg)), y = c(min_y-2, f(max(xg))+0.2), type = "n", xlab = "", ylab = "", xaxt = "n", yaxt = "n", bty="n")
-
-# Draw new axis
-segments(x0 = min_x, y0 = min_y, x1 = max(xg), y1 = min_y)
-segments(x0 = min_x, y0 = min_y, x1 = min_x, y1 = f(max(xg)))
-
-# Draw distribution lines
-# Vertical
-segments(x0 = draws, y0 = min_y - dens_offset_bottom - approxfun(out_dens_bottom)(draws) * 0.5, x1 = draws, 
-         y1 = f(draws), col = scales::alpha("#8210b3", 0.8), lwd = 0.3)
-segments(x0 = m1, y0 = min_y - dens_offset_bottom - approxfun(out_dens_bottom)(m1) * 0.5, x1 = m1, 
-         y1 = f(m1), col = "black", lwd = 0.3)
-# Horizontal
-segments(x0 = min_x - dens_offset_left - approxfun(out_dens_left)(f(draws)) * 0.2, y0 = f(draws), 
-         x1 = draws, y1 = f(draws), col = scales::alpha("#8210b3", 0.8), lwd = 0.3)
-segments(x0 = min_x - dens_offset_left - approxfun(out_dens_left)(f(m1)) * 0.2, y0 = f(m1), 
-         x1 = m1, y1 = f(m1), col = "black", lwd = 0.3)
-
-
-# Draw main lines
-lines(xg, y, type = "l", col = "#ad1c0c", lwd = 2.5, asp = 1)
-
-# Draw derivatives
-lines(xg1, y_lin1, col = scales::alpha("#333333", 0.8), lwd = 2)
-
-# Draw approx points
-points(m1, f(m1), pch = 16, cex = 0.2)
-
-# draw bottom dens
-lines(out_dens_bottom$x, min_y - dens_offset_bottom - out_dens_bottom$y * 0.5, lwd = 2, col = "#8210b3")
-
-# draw left dens
-lines(min_x - dens_offset_left - out_dens_left$y * 0.2, y = out_dens_left$x, lwd = 2, col = "#8210b3")
-
-# Draw std bar bottom
-segments(x0 = qnorm(0.1, m1, sd=0.2), x1 = qnorm(0.9, m1, sd = 0.2), 
-         y0 = min_y - dens_offset_bottom - max(out_dens_bottom$y) * 0.5 - 0.1, 
-         y1 = min_y - dens_offset_bottom - max(out_dens_bottom$y) * 0.5 - 0.1,
-         lwd = 1.5)
-# Draw std bar left
-segments(y0 = qnorm(0.1, f(m1), sd=f_deriv(m1) * 0.2), y1 = qnorm(0.9, f(m1), sd = f_deriv(m1) * 0.2), 
-         x0 = min_x - dens_offset_left - max(out_dens_left$y) * 0.2 - 0.1, 
-         x1 = min_x - dens_offset_left - max(out_dens_left$y) * 0.2 - 0.1,
-         lwd = 1.5)
-
-dev.off()
-
+```{r comb_plot, fig.width=6.69, fig.height=3}
+cowplot::plot_grid(p1, p2, nrow = 1, align = "h", rel_widths = c(1, 1), labels = c("A", "B"))
+cowplot::save_plot("../output/heteroskedasticity/heteroskedasticity_and_graph_of_vsts_raw.pdf", last_plot(), base_width = 6.69, base_height = 2, scale = 1.25)
 ```
-
 
 
 # Session Info
