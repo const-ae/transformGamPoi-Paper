@@ -1,0 +1,155 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+
+```{r}
+library(SingleCellExperiment)
+library(tidyverse)
+library(MatrixGenerics)
+
+theme_set(cowplot::theme_cowplot())
+```
+
+
+
+```{r load_data}
+knn_list <- readRDS("../data/deep_seq-result-896165-raw_knns.Rds")
+```
+
+
+```{r dataset_annotation}
+dataset_annotation <- enframe(c(msSCRB = "mcSCRB-seq of JM8 cells", smartSeq3_hek = "Smart-seq3 of HEK cells",
+                            smartSeq3_fibro = "Smart-seq3 of Fibroblasts (1)", smartSeq3_fibro_alt = "Smart-seq3 of Fibroblasts (2)"),
+                          name = "dataset", value = "dataset_label") %>%
+  mutate(dataset_label = factor(dataset_label, levels = dataset_label))
+```
+
+
+```{r methods_of_interest}
+methods_of_interest <- c("logp1", "logp_cpm", "logp_alpha", "acosh", "pearson_clipping", "rand_quantile", "sanity_vst", "sanity_dist")
+```
+
+```{r method_annotation}
+method_annotation <- tibble(method = factor(methods_of_interest, levels = methods_of_interest, ordered = TRUE)) %>%
+  mutate(method_type = case_when(
+    str_detect(method, "sanity") ~ "Sanity",
+    method %in% c("logp1", "logp_cpm", "logp_alpha", "acosh") ~ "Delta method VST",
+    method %in% c("pearson_clipping", "rand_quantile") ~ "Residual VST",
+    TRUE ~ NA_character_
+  )) %>%
+  mutate(method_type = factor(method_type, levels = c("Delta method VST", "Residual VST", "Sanity")))
+
+```
+
+```{r color_definitions}
+color_map <-  c("Delta method VST" = "#1f78b4", "Residual VST" = "#33a02c", 
+                "Sanity" = "#fb9a99")
+```
+
+```{r axis_labels}
+axis_labels <- c("logp1" = expression(log(x+1)), "logp_cpm" = expression(log(CPM+1)), 
+                   "logp_alpha" = expression(log(x+1/(4*alpha))), "acosh" = expression(acosh(2*alpha*x+1)),
+                   "pearson_clipping" = "Pearson Resid", "rand_quantile" = "Rand. Quant. Resid",
+                   "sanity_vst" = "Sanity MAP", "sanity_dist" = "Sanity Distance")
+```
+
+
+```{r prepare_data}
+dat <- map_df(knn_list, function(knns){
+    map_df(knns, function(index_mat){
+      as_tibble(index_mat) %>%
+        mutate(cell = paste0("cell_", seq_len(n()))) %>%
+        pivot_longer(-cell, names_to = "tmp", values_to = "neighbor") %>%
+        dplyr::select(-tmp)
+  }, .id = "method")
+}, .id = "dataset") %>%
+  filter(method %in% methods_of_interest) %>%
+  mutate(method = factor(method, levels = methods_of_interest)) %>%
+  group_by(dataset, neighbor, cell) %>%
+  summarize(overlap = as.factor(paste0(sort(method), collapse = "-")), .groups = "drop") %>%
+  group_by(dataset, cell, overlap, .drop = FALSE) %>%
+  summarize(common_neighbors = n(), .groups = "drop") %>%
+  mutate(intersection_degree = str_count(overlap, "-")) 
+```
+
+
+
+```{r make_lot, fig.width=8, fig.height=8}
+pl <- dat %>%
+  mutate(overlap = fct_reorder(overlap, -common_neighbors)) %>%
+  filter(as.numeric(overlap) < 15) %>%
+  tidylog::left_join(dataset_annotation, by = "dataset") %>%
+  ggplot(aes(x = overlap, y = common_neighbors)) +
+    geom_hline(yintercept = c(0, 10, 20, 30), color = "grey", alpha = 0.8) +
+    ggbeeswarm::geom_quasirandom(groupOnX = TRUE, size = 0.1) +
+    stat_summary(geom = "crossbar", color = "red", 
+                 fun = mean, fun.min = mean, fun.max = mean,
+                 fatten = 2.5, width = 0.5) +
+    scale_y_continuous(limits = c(0, 30), expand = expansion(add = 0)) +
+    ggupset::axis_combmatrix(sep = "-", clip = "off", levels = methods_of_interest, 
+                             override_plotting_function = function(df){
+                               tmp <- tibble(y = c(1, 2, 3.6, 4.6, 6.2, 7.2, 8.2, 9.2),
+                                       dark = rep(c(TRUE, FALSE), length = 8))
+                               df %>%
+                                 left_join(mutate(method_annotation, method = fct_rev(method)), by = c(single_label = "method")) %>%
+                                 mutate(point_color_label = case_when(
+                                   ! observed ~ "inactive",
+                                   observed ~ as.character(method_type),
+                                 )) %>%
+                                 ggplot(aes(x= at, y= single_label)) +
+                                   geom_rect(data = tmp, aes(fill = dark, x = 0.5, y = y), ymin = tmp$y - 0.5, ymax = tmp$y + 0.5, xmin = 0, xmax = 1) +
+                                   geom_point(data = . %>% filter(!observed), aes(color= point_color_label), size = 3) +
+                                   geom_line(data= function(dat) dat[dat$observed, ,drop=FALSE], aes(group = labels), size= 1.2) +
+                                   geom_point(data = . %>% filter(observed), aes(color= point_color_label), size = 3) +
+                                   ylab("") + xlab("") +
+                                   scale_x_continuous(limits = c(0, 1), expand = c(0, 0)) +
+                                   gggroupedscale::scale_y_grouped_discrete(labels = axis_labels, grouping = function(x){
+                                     -as.numeric(deframe(method_annotation)[x])
+                                   }, gap_size = 0.6) +
+                                   scale_fill_manual(values= c(`TRUE` = "white", `FALSE` = "#F7F7F7")) +
+                                   scale_color_manual(values= c("inactive" = "#E0E0E0", color_map)) +
+                                   guides(fill="none", color = "none") +
+                                   theme(
+                                     panel.background = element_blank(),
+                                     axis.text.x = element_blank(),
+                                     axis.ticks.y = element_blank(),
+                                     axis.ticks.length = unit(0, "pt"),
+                                     axis.title.y = element_blank(),
+                                     axis.title.x = element_blank(),
+                                     axis.line = element_blank(),
+                                     panel.border = element_blank()
+                                   )
+                             }) +
+    facet_wrap(vars(dataset_label), ncol = 1) +
+    labs(x = "", y = "Neighbor Overlap") +
+    ggupset::theme_combmatrix(combmatrix.label.make_space = FALSE,
+                              combmatrix.label.total_extra_spacing = unit(20, "pt")) +
+    theme(plot.margin = unit(c(7, 7, 7, 80), "pt"),
+          axis.title.x = element_blank(),
+          strip.background = element_blank(),
+          panel.spacing.y = unit(7, "pt"))
+pl
+```
+
+
+```{r save_plot, fig.width=8, fig.height=8}
+title <- cowplot::ggdraw() + cowplot::draw_label("Overlap of neighbors across all candidate transformations", 
+                                        fontface = "bold", x = 0.02, hjust = 0, size = 15)
+
+pl_compl <- cowplot::plot_grid(title, pl, rel_heights = c(0.04, 1), ncol = 1)
+
+cowplot::save_plot("../output/deeply_sequenced_benchmark-overlap_upset.pdf", pl_compl, nrow = 4, ncol = 1, base_asp = 3, base_height = 2)
+
+```
+
+
+
+# Session Info
+
+```{r session_info}
+sessionInfo()
+```
+
