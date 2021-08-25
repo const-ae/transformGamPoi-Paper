@@ -1,85 +1,41 @@
+# This is a simple script to aggregate all the results from the benchmark into one convenient table
+
 library(tidyverse)
-library(tidylog)
-`%|%` <- rlang::`%|%`
+library(tidylog, warn.conflicts = FALSE)
 
-# Get Random_tree
-
-dat <- list.files("../output/benchmark/random_tree", pattern = "random_tree-full_run", full.names = TRUE) %>%
-  map_df(~ dplyr::mutate(filename = .x, read_tsv(.x, col_types = cols()))) %>%
-  dplyr::select(filename, everything()) %>%
-  mutate(filename = as_tibble(str_match(filename, 
-                                        pattern = ".+random_tree-full_run-id_([a-z]{5})-knn_(\\d+)-pcadim_(\\d+)-script_([0-9a-z]{6})-results.tsv")[,-1,drop=FALSE], 
-                              .name_repair = ~ c("id.x", "knn", "pcadim", "script_hash.x"))) %>%
-  unpack(filename) %>%
-  filter(id.x == id, script_hash.x == script_hash) %>%
-  dplyr::select(- ends_with(".x")) %>%
-  mutate(knn = as.integer(knn), pcadim = as.integer(pcadim))
-
-
-method_annotation <- tibble(method = c("logp1", "logp_alpha", "acosh", "pearson", "rand_quantile" ,
-                                       "pca_logp1", "pca_logp_alpha", "pca_acosh", "pca_pearson", "pca_rand_quantile", 
-                                       "sanity_dists")) %>%
+method_annotation <- tibble(
+  method = c("logp1", "logp_cpm", "logp_alpha", "acosh", "pearson", "pearson_clip", "rand_quantile", "sctransform", "sanity_main",
+             "pca_logp1", "pca_logp_cpm", "pca_logp_alpha", "pca_acosh", "pca_pearson", "pca_pearson_clip", "pca_rand_quantile", "pca_sctransform", "pca_sanity_main",
+             "sanity_dists")) %>%
   mutate(group = case_when(
     str_starts(method, "pca_") ~ "PCA",
-    str_starts(method, "sanity_") ~ "Sanity",
+    method == "sanity_dists" ~ "Sanity",
     TRUE ~ "Transformation"
   ))
 
-
-
-# Get Linear Random_tree
-
-dat3 <- list.files("../output/benchmark/linear_random_tree", pattern = "linear_random_tree-full_run", full.names = TRUE) %>%
-  map_df(~ dplyr::mutate(filename = .x, read_tsv(.x, col_types = cols()))) %>%
-  dplyr::select(filename, everything()) %>%
-  mutate(filename = as_tibble(str_match(filename, 
-                                        pattern = ".+linear_random_tree-full_run-id_([a-z]{5})-knn_(\\d+)-pcadim_(\\d+)-script_([0-9a-z]{6})-results.tsv")[,-1,drop=FALSE], 
-                              .name_repair = ~ c("id.x", "knn", "pcadim", "script_hash.x"))) %>%
-  unpack(filename) %>%
-  filter(id.x == id, script_hash.x == script_hash) %>%
-  dplyr::select(- ends_with(".x")) %>%
-  mutate(knn = as.integer(knn), pcadim = as.integer(pcadim))
-
-
-# Duration
-
-
-extract_user_time_for_method <- function(content, method){
-  as.numeric(str_match(content, paste0('\n\\s*user\\s+system\\s+elapsed\\s*\n\\s*(\\d+\\.\\d+)\\s+(\\d+\\.\\d+)\\s+(\\d+\\.\\d+)\\s*\n\\[1\\] \"', method, '\"'))[,2])
-}
-
-
-duration_df <- tibble(files = list.files("../intermediate/benchmark/", pattern = "slurm-.+.out", full.names = TRUE)) %>%
-  mutate(modified_date = as.Date(file.info(files)$mtime)) %>%
-  # filter(lubridate::ymd(modified_date) == "2021-05-27" | lubridate::ymd(modified_date) == "2021-05-28") %>%
-  mutate(content = map_chr(files, ~ paste0(read_lines(.x), collapse ="\n"))) %>%
-  mutate(id = str_match(content, '\n\\[1\\] \"id: ([a-z]{5})\"')[,2]) %>%
-  mutate(durations = map(content, function(co){
-    tibble(method = c("sanity_dists", "logp1", "logp_alpha", "acosh", "pearson", "rand_quantile",  
-                      "pca_logp1", "pca_logp_alpha", "pca_acosh", "pca_pearson", "pca_rand_quantile"),
-           preproc_duration = extract_user_time_for_method(co, c(paste0("Finished ", c("sanity", "log transformation", "log plus alpha transformation", "acosh", "pearson", "randomized quantile")), 
-                                                                 paste0("Finished ", c(          "log transformation", "log plus alpha transformation", "acosh", "pearson", "randomized quantile")))))
-  })) %>%
-  unnest(durations) %>%
-  mutate(sanity_transformation_dur = as.numeric(str_match(content, '\nPrint extended output\\s*\n\\s*user\\s+system\\s+elapsed\\s*\n\\s*(\\d+\\.\\d+)\\s+(\\d+\\.\\d+)\\s+(\\d+\\.\\d+)\\s*\nSanity folder')[,2])) %>%
-  mutate(preproc_duration = preproc_duration +  ifelse(str_starts(method, "sanity_"), sanity_transformation_dur, 0)) %>%
-  dplyr::select(-c(content, sanity_transformation_dur))
-
-
-
-
-bind_rows(mutate(dat, data = "random_tree"),
-          mutate(dat3, data = "linear_random_tree")) %>%
+bind_rows(
+  map_df(list.files("data/benchmark/random_tree/", full.names = TRUE), ~ read_tsv(.x, col_types = cols())) %>%
+    mutate(dataset = "random_tree"),
+  map_df(list.files("data/benchmark/linear_random_tree/", full.names = TRUE), ~ read_tsv(.x, col_types = cols())) %>%
+    mutate(dataset = "linear_random_tree")
+) %>%
   left_join(method_annotation) %>%
+  # I do a lot of double saving of all non-PCA results, so I have to get rid of them again
+  mutate(pcadims = ifelse(group == "PCA", pcadims, NA)) %>%
+  distinct() %>%
+  # Fix order of method
   mutate(method = factor(method, levels = method_annotation$method)) %>%
-  filter(script_hash == "6e2dd3") %>%
-  left_join(duration_df, by = c("id", "method")) %>%
-  mutate(total_duration = duration + preproc_duration) %>%
-  dplyr::select(-c(preproc_duration, duration)) %>%
-  write_tsv("../output/benchmark_results.tsv")
+  # Pick columns
+  transmute(script_hash, id, method, transformation_method = preproc_method, dataset, group, preproc_method, pcadims, knn, mean, median, min, max,
+            transformation_cputime = preproc_duration_user + preproc_duration_user_child + preproc_duration_system + preproc_duration_sys_child,
+            knnsearch_cputime = duration_user + duration_user_child + duration_system + duration_sys_child,
+            transformation_elapsed = preproc_duration_elapsed,
+            knnsearch_elapsed = duration_elapsed) %>% 
+  # Save
+  write_tsv("data/benchmark_results.tsv")
 
 
 
-
-
+# Session Info
+sessionInfo()
 
