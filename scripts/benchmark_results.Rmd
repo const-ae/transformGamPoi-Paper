@@ -3,273 +3,398 @@ title: "R Notebook"
 output: html_notebook
 ---
 
-
 ```{r load_libraries}
 library(tidyverse)
 library(tidylog, warn.conflicts = FALSE)
 theme_set(cowplot::theme_cowplot())
 ```
 
+
+
+
 ```{r}
-methods_of_interest <- factor(c("logp1", "logp_alpha", "acosh", "pearson", "rand_quantile", 
-                                "pca_logp1", "pca_logp_alpha", "pca_acosh", "pca_pearson", "pca_rand_quantile", "sanity_dists"))
+res <- read_tsv("../data/benchmark_results.tsv")  
 ```
 
 
-```{r load_data}
-res <- read_tsv("../data/benchmark_results.tsv") %>%
+
+
+
+# Overview
+
+```{r, fig.width=16, fig.height=8}
+res %>%
+  mutate(pcadims = ifelse(is.na(pcadims), 8569, pcadims)) %>%
+  ggplot(aes(x = transformation_method, y = mean / knn)) +
+    ggbeeswarm::geom_quasirandom() +
+    facet_grid(vars(dataset), vars(pcadims), labeller = label_both) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+          legend.position = "bottom")
+```
+
+
+```{r, fig.width=6, fig.height=5}
+res %>%
+  mutate(pcadims = ifelse(is.na(pcadims), 8569, pcadims)) %>%
+  group_by(transformation_method, pcadims, knn, group, dataset) %>%
+  summarize(mean = median(mean), .groups = "drop") %>%
+  mutate(transformation_method = fct_relevel(transformation_method, "sanity_dists", "logp1", "logp_cpm", "logp_alpha", "acosh", "pearson", "pearson_clip", "rand_quantile", "sanity_main")) %>%
+  ggplot() +
+    geom_hline(yintercept = seq(0, 1, by = 0.1), color = "lightgrey", alpha = 0.2) +
+    geom_hline(yintercept = seq(0, 1, by = 0.5), color = "lightgrey", alpha = 0.8) +
+    geom_hline(data = . %>% filter(group == "Sanity"), aes(yintercept = mean / knn, color = transformation_method), size = 1.5, linetype = "dashed") +
+    geom_line(data = . %>% filter(group != "Sanity"), aes(x = pcadims, y = mean / knn, color = transformation_method)) +
+    geom_point(data = . %>% filter(group != "Sanity"), aes(x = pcadims, y = mean / knn, color = transformation_method)) +
+    annotation_logticks(sides = "b") +
+    scale_color_discrete(drop = FALSE) +
+    scale_x_log10(breaks = c(2, 5, 10, 20, 50, 100,  400, 800, 8569), labels = c(2, 5, 10, 20, 50, 100, 400, 800, "full\ndata")) +
+    scale_y_continuous(expand = expansion(0)) +
+    facet_grid(vars(dataset), vars(knn), labeller = label_both, scales = "free_y") 
+```
+
+```{r}
+res %>%
+  mutate(pcadims = ifelse(is.na(pcadims), 8569, pcadims)) %>%
+  filter(transformation_method %in% c("pearson", "pearson_clip", "rand_quantile", "sctransform")) %>%
+  group_by(transformation_method, pcadims, knn, group, dataset) %>%
+  summarize(mean = median(mean), .groups = "drop") %>%
+  ggplot(aes(x = pcadims, y = mean / knn)) +
+    geom_line(aes(color = transformation_method)) +
+    annotation_logticks(sides = "b") +
+    scale_x_log10(breaks = c(2, 5, 10, 20, 50, 100,  400, 800, 8569), labels = c(2, 5, 10, 20, 50, 100, 400, 800, "full\ndata")) +
+    facet_wrap(vars(dataset))
+```
+
+As the performance of Pearson, Pearson (clipped), and sctransform is almost identical, I will only focus on the Pearson (clipped) implementation.
+
+# Focus on the methods of interest
+
+
+```{r}
+methods_of_interest <- factor(c("logp1", "logp_cpm", "logp_alpha", "acosh", 
+                                "pearson_clip", "rand_quantile", 
+                                "pca_logp1", "pca_logp_cpm", "pca_logp_alpha", "pca_acosh", 
+                                "pca_pearson_clip", "pca_rand_quantile", 
+                                "sanity_main", "pca_sanity_main", "sanity_dists"))
+
+res <- res %>%
+  filter(method %in% methods_of_interest) %>%
   mutate(method = factor(method, levels = methods_of_interest)) 
-res
 ```
 
 
+
+# Plots for the paper
 
 ```{r method_annotation}
 method_annotation <- tibble(method = methods_of_interest) %>%
   mutate(method_type = case_when(
-    method %in% c("logp1", "logp_alpha", "acosh") ~ "Delta method VST",
-    method %in% c("pearson", "rand_quantile") ~ "Residual VST",
-    method %in% c("pca_logp1", "pca_logp_alpha", "pca_acosh") ~ "Delta method VST + PCA",
-    method %in% c("pca_pearson", "pca_rand_quantile") ~ "Residual VST + PCA",
-    method == "sanity_dists" ~ "Sanity",
+    str_detect(method, "sanity") ~ "Sanity",
+    method %in% c("logp1", "logp_cpm", "logp_alpha", "acosh") ~ "Delta method VST",
+    method %in% c("pearson_clip", "rand_quantile") ~ "Residual VST",
+    method %in% c("pca_logp1", "pca_logp_cpm", "pca_logp_alpha", "pca_acosh") ~ "Delta method VST + PCA",
+    method %in% c("pca_pearson_clip", "pca_rand_quantile") ~ "Residual VST + PCA",
     TRUE ~ NA_character_
   )) %>%
-  mutate(method_type = factor(method_type, levels = c("Delta method VST", "Residual VST", "Delta method VST + PCA", "Residual VST + PCA", "Sanity")))
+  mutate(method_type = factor(method_type, levels = c("Delta method VST", "Residual VST",
+                                                      "Delta method VST + PCA", "Residual VST + PCA", "Sanity")))
 
+```
 
-method_annotation
+```{r color_definitions}
+# method_type -> color
+color_map <-  c("Delta method VST" = "#a6cee3", "Residual VST" = "#b2df8a", 
+                "Delta method VST + PCA" = "#1f78b4", "Residual VST + PCA" = "#33a02c",
+                "Sanity" = "#fb9a99")
+```
+
+```{r axis_labels}
+x_axis_labels <- c("logp1" = expression(log(x+1)), "logp_cpm" = expression(log(CPM+1)), 
+                   "logp_alpha" = expression(log(x+1/(4*alpha))), "acosh" = expression(acosh(2*alpha*x+1)),
+                   "pearson_clip" = "Pearson Resid", "rand_quantile" = "Rand. Quant. Resid",
+                   "pca_logp1" = expression(log(x+1)), "pca_logp_cpm" = expression(log(CPM+1)), 
+                   "pca_logp_alpha" = expression(log(x+1/(4*alpha))), "pca_acosh" = expression(acosh(2*alpha*x+1)),
+                   "pca_pearson_clip" = "Pearson Resid", "pca_rand_quantile" = "Rand. Quant. Resid",
+                   "sanity_main" = "Sanity MAP", "pca_sanity_main" = "Sanity MAP + PCA", "sanity_dists" = "Sanity Distance")
+```
+
+```{r method_labels}
+method_type_labels1 <- enframe(c("Delta method VST" = 2.5, "Residual VST" = 6.5, 
+          "Delta method VST\n+ PCA (20)" = 10.5, "Residual VST\n+ PCA (20)" = 14.5,
+          "Sanity" = 18), name = "method_type", value = "x_location")
+method_type_labels2 <- enframe(c("Delta method VST" = 2.5, "Residual VST" = 6.5, 
+          "Delta method VST\n+ PCA (150)" = 10.5, "Residual VST\n+ PCA (150)" = 14.5,
+          "Sanity" = 18), name = "method_type", value = "x_location")
 ```
 
 
+# Main Figure
 
-```{r overviewplot, fig.width=15, fig.height=8}
-color_map <-  c("Delta method VST" = "#022B3A", "Residual VST" = "#1F7A8C", 
-                "Delta method VST + PCA" = "#FF521B", "Residual VST + PCA" = "#F2AF29",
-                "Sanity" = "#A3C9A8")
+KNN = 100, pca_dim = 20 for the linear data and 150 for the random walk
 
-res %>%
-  left_join(method_annotation) %>%
-  # filter(pcadim == 150) %>%
-  filter(data %in% c("linear_random_tree", "random_tree")) %>%
-  ggplot(aes(x = method, y = mean / knn)) +
-    geom_hline(yintercept = seq(0, 1, by = 0.1), color = "lightgrey", alpha = 0.2) +
-    geom_hline(yintercept = seq(0, 1, by = 0.5), color = "lightgrey", alpha = 0.8) +
-    ggbeeswarm::geom_quasirandom(aes(color = method_type)) +
-    facet_wrap(vars(data, knn, pcadim), labeller = label_both) +
-    scale_color_manual(values = color_map) +
-    scale_y_continuous(expand = expansion(0)) +
-    theme(axis.text.x = element_text(angle = 60, hjust = 1))
-```
-
-
-Main Figure
-
-KNN = 20, pca_dim = 20,50
-
-```{r main_figure}
-x_axis_labels <- c("logp1" = expression(log(x+1)), "logp_alpha" = expression(log(x+1/(4*alpha))), "acosh" = expression(acosh(2*alpha*x+1)),
-                   "pearson" = "Pearson Residuals", "rand_quantile" = "Rand Quantile Resid",
-                   "pca_logp1" = expression(log(x+1)), "pca_logp_alpha" = expression(log(x+1/(4*alpha))), "pca_acosh" = expression(acosh(2*alpha*x+1)),
-                   "pca_pearson" = "Pearson Residuals", "pca_rand_quantile" = "Rand Quantile Resid",
-                   "sanity_dists" = "Sanity")
-
-
+```{r main_figure, fig.width=9.69, fig.height=4}
 p1 <- res %>%
   left_join(method_annotation) %>%
-  filter(data == "linear_random_tree" & knn == 100 & pcadim == 20) %>%
-  ggplot(aes(x = method, y = mean / knn)) +
-    geom_hline(yintercept = seq(0, 1, by = 0.1), color = "lightgrey", alpha = 0.2) +
+  filter(dataset == "linear_random_tree" & knn == 100 & (is.na(pcadims) | pcadims == 20)) %>%
+  ggplot(aes(x = method)) +
+    geom_hline(yintercept = seq(0, 1, by = 0.25), color = "lightgrey", alpha = 0.2) +
     geom_hline(yintercept = seq(0, 1, by = 0.5), color = "lightgrey", alpha = 0.8) +
-    geom_vline(xintercept = seq(1, 11), color = "lightgrey", alpha = 0.2) +
-    ggbeeswarm::geom_quasirandom(aes(color = method_type)) +
-    scale_color_manual(values = color_map) +
+    geom_vline(xintercept = c(1:4, 6:7, 9:12, 14:15, 17:20), color = "lightgrey", alpha = 0.2) +
+    stat_summary(geom = "pointrange", aes(y = mean / knn, color = method_type), fun.data = mean_sdl, show.legend = FALSE) +
+    geom_text(data = method_type_labels1, aes(x = x_location, y = 0.15, label = method_type), 
+              hjust = 0.5, vjust = 1, size = 2.9, lineheight = 0.85) +
+    scale_fill_manual(values = color_map) +
     scale_y_continuous(expand = expansion(0)) +
-    scale_x_discrete(labels = x_axis_labels) +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+    scale_color_manual(values = color_map) +
+    coord_cartesian(clip = "off") +
+    gggroupedscale::scale_x_grouped_discrete(labels = x_axis_labels, grouping = function(x){
+      deframe(method_annotation)[x]
+    }, gap_size = 1) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
           axis.title.x = element_blank(),
           plot.margin = margin(t = 7, r = 4, b = 7, l = 7)) +
-    labs(x = "", y = "Mean KNN Recall", 
+    labs(x = "", y = "KNN Recall", 
          title = "K-nearest neighbor recall on simulated data",
-         subtitle = "Branched linear manifold")
+         subtitle = "(1) Branched linear manifold")
 
 
 p2 <- res %>%
   left_join(method_annotation) %>%
-  filter(data == "random_tree" & knn == 100 & pcadim == 150) %>%
-  ggplot(aes(x = method, y = mean / knn)) +
-    geom_hline(yintercept = seq(0, 1, by = 0.1), color = "lightgrey", alpha = 0.2) +
+  filter(dataset == "random_tree" & knn == 100 & (is.na(pcadims) | pcadims == 150)) %>%
+  ggplot(aes(x = method)) +
+    geom_hline(yintercept = seq(0, 1, by = 0.25), color = "lightgrey", alpha = 0.2) +
     geom_hline(yintercept = seq(0, 1, by = 0.5), color = "lightgrey", alpha = 0.8) +
-    geom_vline(xintercept = seq(1, 11), color = "lightgrey", alpha = 0.2) +
-    ggbeeswarm::geom_quasirandom(aes(color = method_type)) +
-    scale_color_manual(values = color_map) +
+    geom_vline(xintercept = c(1:4, 6:7, 9:12, 14:15, 17:20), color = "lightgrey", alpha = 0.2) +
+    stat_summary(geom = "pointrange", aes(y = mean / knn, color = method_type), fun.data = mean_sdl, show.legend = FALSE) +
+    geom_text(data = method_type_labels2, aes(x = x_location, y = 0.15, label = method_type), 
+              hjust = 0.5, vjust = 1, size = 2.9, lineheight = 0.85) +
+    scale_fill_manual(values = color_map) +
     scale_y_continuous(expand = expansion(0)) +
-    scale_x_discrete(labels = x_axis_labels) +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1), 
+    scale_color_manual(values = color_map) +
+    coord_cartesian(clip = "off") +
+    gggroupedscale::scale_x_grouped_discrete(labels = x_axis_labels, grouping = function(x){
+      deframe(method_annotation)[x]
+    }, gap_size = 1) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5), 
           axis.text.y = element_blank(), axis.title = element_blank(),
-          plot.margin = margin(t = 7, r = 7, b = 7, l = 3)) +
-    labs(x = "", 
-         y = "",
-         # title = "K-nearest neighbor recall on simulate ndata",
-         subtitle = "Branched random walk")
+          plot.margin = margin(t = 7, r = 7, b = 7, l = 7)) +
+    labs(x = "", y = "", 
+         # title = "K-nearest neighbor recall on simulated data",
+         subtitle = "(2) Branched random walk")
 
-legend <- cowplot::get_legend(p1 + theme(legend.position = "bottom") + 
-                                guides(color = guide_legend(title = "", override.aes = list(size = 3),
-                                                            label.hjust = 0, label.theme =  element_text(size = 8))))
 
-cowplot::plot_grid(
-  cowplot::plot_grid(p1 + guides(color = FALSE), p2 + guides(color = FALSE),
-                   nrow = 1, align = "h"),
-  cowplot::plot_grid(NULL, legend, NULL,
-                     nrow =1, rel_widths = c(0.1, 1, 0.1)),
-  ncol = 1, rel_heights = c(1, 0.1)
-)
-
-cowplot::save_plot("../output/simulated_data_benchmark_main.pdf", last_plot(), ncol = 2, base_asp = 1.2)
+cowplot::plot_grid(p1, p2, rel_widths = c(1.13, 1), nrow = 1, align = "h")
+cowplot::save_plot("../output/simulated_data_benchmark_main.pdf", last_plot(), ncol = 2, base_asp = 1.2, scale = 1.1)
 
 ```
 
-```{r}
+
+
+```{r time_log_ticks}
 time_minor_ticks <- tibble(ticks = c(seq(0, 60, by = 10), seq(0, 60 * 60, by = 10 * 60), seq(0, 24 * 60 * 60, by = 6 * 60 * 60), seq(0, 7 * 24 * 60 * 60, by = 24 * 60 * 60)))
 time_major_ticks <- tibble(ticks = c(1, 60, 60 * 60, 24 * 60 * 60, 7 * 24 * 60 * 60))
 ```
 
 
 
-```{r}
-rel_scaling_factor_lin <- filter(res, data == "linear_random_tree" & knn == 100 & pcadim == 20 & method == "pca_logp1") %>%
-  pull(total_duration) %>% 
+```{r relative_duration, fig.width=9.69, fig.height=4}
+rel_scaling_factor_lin <- filter(res, dataset == "linear_random_tree" & knn == 100 & pcadims == 20 & method == "pca_logp1") %>%
+  mutate(total = transformation_cputime + knnsearch_cputime) %>% 
+  pull(total) %>%
   median()
 
-rel_scaling_factor_tree <- filter(res, data == "random_tree" & knn == 100 & pcadim == 150 & method == "pca_logp1") %>%
-  pull(total_duration) %>% 
+rel_scaling_factor_tree <- filter(res, dataset == "random_tree" & knn == 100 & pcadims == 150 & method == "pca_logp1") %>%
+  mutate(total = transformation_cputime + knnsearch_cputime) %>% 
+  pull(total) %>%
   median()
 
+rel_scaling_factor_lin
+rel_scaling_factor_tree
+```
 
+
+```{r duration_figure, fig.width=9.69, fig.height=4}
 p1 <- res %>%
   left_join(method_annotation) %>%
-  filter(data == "linear_random_tree" & knn == 100 & pcadim == 20) %>%
-  ggplot(aes(x = method, y = total_duration)) +
+  filter(dataset == "linear_random_tree" & knn == 100 & (is.na(pcadims) | pcadims == 20)) %>%
+  mutate(total_duration = transformation_cputime + knnsearch_cputime) %>% 
+  ggplot(aes(x = method)) +
+    geom_text(data = method_type_labels1, aes(x = x_location, y = 5, label = method_type), 
+              hjust = 0.5, vjust = 1, size = 2.4) +
     geom_rug(data = time_minor_ticks, aes(y = ticks, x = 0), sides = "l", color = "black", length = unit(0.1, "cm")) +
     geom_rug(data = time_major_ticks, aes(y = ticks, x = 0), sides = "l", color = "black", length = unit(0.3, "cm")) +
     geom_hline(yintercept = c(1, 60, 60 * 60, 24 * 60 * 60, 7 * 24 * 60 * 60), color = "lightgrey", alpha = 0.2) +
-    geom_vline(xintercept = seq(1, 11), color = "lightgrey", alpha = 0.2) +
-    ggbeeswarm::geom_quasirandom(aes(color = method_type)) +
-    scale_color_manual(values = color_map) + 
-    guides(color = FALSE) +
+    geom_vline(xintercept = c(1:4, 6:7, 9:12, 14:15, 17:20), color = "lightgrey", alpha = 0.2) +
+    stat_summary(geom = "pointrange", aes(y = total_duration, color = method_type), fun.data = mean_sdl, show.legend = FALSE) +
+    scale_fill_manual(values = color_map) +
     scale_y_log10(breaks = c(0.001, 1, 60, 60 * 60, 24 * 60 * 60, 7 * 24 * 60 * 60), 
-          labels = c("1ms", "1sec", "1min", "1hour", "1day", "1week"), limits = c(1, 7 * 24 * 60 * 60),
+          labels = c("1ms", "1sec", "1min", "1hour", "1day", "1week"),
           name = "Absolute",
           sec.axis = sec_axis(trans = ~ .x / rel_scaling_factor_lin,
                               breaks = c(1, 10, 100, 1000, 10000), 
                               labels = c(1, 10, 100, "1,000", "10,000"),
                               name = "Relative")) +
-    scale_x_discrete(labels = x_axis_labels) +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+    gggroupedscale::scale_x_grouped_discrete(labels = x_axis_labels, grouping = function(x){
+      deframe(method_annotation)[x]
+    }, gap_size = 1) +
+    coord_cartesian(ylim =  c(1 * 0.95, 7 * 24 * 60 * 60 * 1.1)) +
+    scale_color_manual(values = color_map) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
           # axis.title.y.left = element_blank(), 
           axis.title.y.right = element_blank(),
           axis.title.x = element_blank(),
           plot.margin = margin(t = 7, r = 4, b = 7, l = 7)) +
     labs(x = "", y = "", 
-         title = "Duration (Transformation + KNN-search)", subtitle = "Branched linear manifold")
+         title = "Duration (Transformation + KNN-search)", 
+         subtitle = "(1) Branched linear manifold")
+
 
 p2 <- res %>%
   left_join(method_annotation) %>%
-  filter(data == "random_tree" & knn == 100 & pcadim == 150) %>%
-  ggplot(aes(x = method, y = total_duration)) +
+  filter(dataset == "random_tree" & knn == 100 & (is.na(pcadims) | pcadims == 150)) %>%
+  mutate(total_duration = transformation_cputime + knnsearch_cputime) %>% 
+  ggplot(aes(x = method)) +
+    geom_text(data = method_type_labels2, aes(x = x_location, y = 5, label = method_type), 
+              hjust = 0.5, vjust = 1, size = 2.4) +
     geom_rug(data = time_minor_ticks, aes(y = ticks, x = 0), sides = "l", color = "black", length = unit(0.1, "cm")) +
     geom_rug(data = time_major_ticks, aes(y = ticks, x = 0), sides = "l", color = "black", length = unit(0.3, "cm")) +
     geom_hline(yintercept = c(1, 60, 60 * 60, 24 * 60 * 60, 7 * 24 * 60 * 60), color = "lightgrey", alpha = 0.2) +
-    geom_vline(xintercept = seq(1, 11), color = "lightgrey", alpha = 0.2) +
-    ggbeeswarm::geom_quasirandom(aes(color = method_type)) +
-    scale_color_manual(values = color_map) + 
-    guides(color = FALSE) +
+    geom_vline(xintercept = c(1:4, 6:7, 9:12, 14:15, 17:20), color = "lightgrey", alpha = 0.2) +
+    stat_summary(geom = "pointrange", aes(y = total_duration, color = method_type), fun.data = mean_sdl, show.legend = FALSE) +
+    scale_fill_manual(values = color_map) +
     scale_y_log10(breaks = c(0.001, 1, 60, 60 * 60, 24 * 60 * 60, 7 * 24 * 60 * 60), 
-          labels = c("1ms", "1sec", "1min", "1hour", "1day", "1week"), limits = c(1, 7 * 24 * 60 * 60),
+          labels = c("1ms", "1sec", "1min", "1hour", "1day", "1week"),
+          name = "Absolute",
           sec.axis = sec_axis(trans = ~ .x / rel_scaling_factor_tree,
                               breaks = c(1, 10, 100, 1000, 10000), 
                               labels = c(1, 10, 100, "1,000", "10,000"),
                               name = "Relative")) +
-    scale_x_discrete(labels = x_axis_labels) +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+    gggroupedscale::scale_x_grouped_discrete(labels = x_axis_labels, grouping = function(x){
+      deframe(method_annotation)[x]
+    }, gap_size = 1) +
+    scale_color_manual(values = color_map) +
+    coord_cartesian(ylim =  c(1 * 0.95, 7 * 24 * 60 * 60 * 1.1)) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
           axis.title.y.left = element_blank(), axis.text.y.left = element_blank(),
           axis.title.x = element_blank(),
-          plot.margin = margin(t = 7, r = 7, b = 7, l = 3)) +
+          plot.margin = margin(t = 7, r = 7, b = 7, l = 7)) +
     labs(x = "", y = "", 
-         subtitle = "Branched random tree")
-
-
+         subtitle = "(2) Branched random walk")
 
 cowplot::plot_grid(p1, p2, nrow = 1, align = "h", rel_widths = c(1, 0.9))
-
-cowplot::save_plot("../output/simulated_data_benchmark_duration.pdf", last_plot(), base_asp = 1.4, ncol = 2)
+cowplot::save_plot("../output/simulated_data_benchmark_duration.pdf", last_plot(), base_asp = 1.2, ncol = 2, scale = 1.2)
 
 ```
 
 
 
 
-
 # PCA trend
 
-
-
-```{r fig.width=10, fig.height=4}
-p1 <- res %>%
-  left_join(method_annotation) %>%
-  filter(data == "linear_random_tree" & knn == 100) %>%
-  filter(group == "PCA" | group == "Sanity") %>%
-  group_by(method, pcadim, knn, group) %>%
+```{r}
+ordering_1 <- res %>%
+  left_join(method_annotation, by = "method") %>%
+  mutate(method_type = str_remove(method_type, " \\+ PCA")) %>%
+  filter(dataset == "linear_random_tree" & knn == 100) %>%
+  mutate(pcadims = ifelse(is.na(pcadims), 8569, pcadims)) %>%
+  group_by(transformation_method, method_type, pcadims, knn, group) %>%
   summarize(mean = median(mean), .groups = "drop") %>%
-  mutate(method = fct_relevel(method, "sanity_dists", "pca_logp_alpha", "pca_acosh", "pca_logp1", "pca_rand_quantile", "pca_pearson")) %>%
-  mutate(method = fct_drop(method)) %>%
-  ggplot(aes(x = pcadim, y = mean / knn, color = method)) +
-    geom_hline(yintercept = seq(0, 1, by = 0.1), color = "lightgrey", alpha = 0.2) +
+  group_by(method_type)  %>%
+  mutate(m_num = as.numeric(fct_rev(fct_reorder(transformation_method, mean, .fun = function(x) sum(x))))) %>%
+  dplyr::select(method_type, transformation_method, m_num) %>%
+  distinct() %>%
+  dplyr::arrange(method_type, m_num)
+
+ordering_2 <- res %>%
+  left_join(method_annotation, by = "method") %>%
+  mutate(method_type = str_remove(method_type, " \\+ PCA")) %>%
+  filter(dataset == "random_tree" & knn == 100) %>%
+  mutate(pcadims = ifelse(is.na(pcadims), 8569, pcadims)) %>%
+  group_by(transformation_method, method_type, pcadims, knn, group) %>%
+  summarize(mean = median(mean), .groups = "drop") %>%
+  group_by(method_type)  %>%
+  mutate(m_num = as.numeric(fct_rev(fct_reorder(transformation_method, mean, .fun = function(x) sum(x))))) %>%
+  dplyr::select(method_type, transformation_method, m_num) %>%
+  distinct() %>%
+  dplyr::arrange(method_type, m_num)
+
+stopifnot(all(ordering_1$transformation_method == ordering_2$transformation_method))
+ordering_1
+```
+
+
+```{r pca_trend_plot, fig.width=9.69, fig.height=6}
+sanity_dist_perf_1 <- res  %>%
+  filter(method == "sanity_dists" & knn == 100 & dataset == "linear_random_tree") %>%
+  summarize(perf = median(mean / knn)) %>%
+  pull()
+
+p1 <- res %>%
+  left_join(method_annotation, by = "method") %>%
+  mutate(method_type = str_remove(method_type, " \\+ PCA")) %>%
+  filter(dataset == "linear_random_tree" & knn == 100) %>%
+  mutate(pcadims = ifelse(is.na(pcadims), 8569, pcadims)) %>%
+  group_by(transformation_method, method_type, pcadims, knn, group) %>%
+  summarize(mean = median(mean), .groups = "drop") %>%
+  group_by(method_type)  %>%
+  mutate(m_num = as.numeric(fct_rev(fct_reorder(transformation_method, mean, .fun = function(x) sum(x))))) %>%
+  ggplot() +
+    geom_hline(yintercept = seq(0, 1, by = 0.25), color = "lightgrey", alpha = 0.2) +
     geom_hline(yintercept = seq(0, 1, by = 0.5), color = "lightgrey", alpha = 0.8) +
-    geom_line(data = . %>% filter(group == "Sanity"), size = 1.5, linetype = "dashed") +
-    geom_point(data = . %>% filter(group == "PCA")) +
-    geom_line(data = . %>% filter(group == "PCA"), size = 1.5) +
+    geom_hline(yintercept = sanity_dist_perf_1, color = "red", size = 1.5, linetype = "dashed") +
+    geom_line(data = . %>% filter(group != "Sanity"), aes(x = pcadims, y = mean / knn, color = method_type, 
+                                                          group = transformation_method, linetype = as.factor(m_num)), show.legend = FALSE) +
+    geom_point(aes(x = pcadims, y = mean / knn, color = method_type), show.legend = FALSE) +
     annotation_logticks(sides = "b") +
-    scale_color_discrete(labels = x_axis_labels, drop = FALSE) +
-    scale_x_log10(breaks = c(2, 5, 10, 20, 50, 100, 200, 400)) +
+    scale_color_manual(values = color_map[c(1,2,5)]) +
+    scale_x_log10(breaks = c(2, 5, 10, 20, 50, 100,  400, 800, 8569), labels = c(2, 5, 10, 20, 50, 100, 400, 800, "full\ndata")) +
     scale_y_continuous(expand = expansion(0)) +
+    scale_shape_manual(values = map_int(LETTERS[1:9], utf8ToInt), labels = x_axis_labels, drop = FALSE) +
+    facet_wrap(vars(method_type), ncol = 1, strip.position = "right") +
+    coord_cartesian(clip = "off") +
     labs(x = "#PCA Dimensions", y = "Mean KNN Recall", 
          title = "The best number of dimensions for PCA is dataset dependent",
-         subtitle = "Branched linear manifold")
+         subtitle = "(1) Branched linear manifold") +
+    theme(strip.background = element_blank(), strip.text = element_blank(), panel.spacing.y = unit(2, "lines"))
+
+
+sanity_dist_perf_2 <- res  %>%
+  filter(method == "sanity_dists" & knn == 100 & dataset == "random_tree") %>%
+  summarize(perf = median(mean / knn)) %>%
+  pull()
 
 p2 <- res %>%
-  left_join(method_annotation) %>%
-  filter(data == "random_tree" & knn == 100) %>%
-  filter(group == "PCA" | group == "Sanity") %>%
-  group_by(method, pcadim, knn, group) %>%
+  left_join(method_annotation, by = "method") %>%
+  mutate(method_type = str_remove(method_type, " \\+ PCA")) %>%
+  filter(dataset == "random_tree" & knn == 100) %>%
+  mutate(pcadims = ifelse(is.na(pcadims), 8569, pcadims)) %>%
+  group_by(transformation_method, method_type, pcadims, knn, group) %>%
   summarize(mean = median(mean), .groups = "drop") %>%
-  mutate(method = fct_relevel(method, "sanity_dists", "pca_logp_alpha", "pca_acosh", "pca_logp1", "pca_rand_quantile", "pca_pearson")) %>%
-  mutate(method = fct_drop(method)) %>%
-  ggplot(aes(x = pcadim, y = mean / knn, color = method)) +
-    geom_hline(yintercept = seq(0, 1, by = 0.1), color = "lightgrey", alpha = 0.2) +
+  group_by(method_type)  %>%
+  mutate(m_num = as.numeric(fct_rev(fct_reorder(transformation_method, mean, .fun = function(x) sum(x))))) %>%
+  ggplot() +
+    geom_hline(yintercept = seq(0, 1, by = 0.25), color = "lightgrey", alpha = 0.2) +
     geom_hline(yintercept = seq(0, 1, by = 0.5), color = "lightgrey", alpha = 0.8) +
-    geom_line(data = . %>% filter(group == "Sanity"), size = 1.5, linetype = "dashed") +
-    geom_point(data = . %>% filter(group == "PCA")) +
-    geom_line(data = . %>% filter(group == "PCA"), size = 1.5) +
+    geom_hline(yintercept = sanity_dist_perf_2, color = "red", size = 1.5, linetype = "dashed") +
+    geom_line(data = . %>% filter(group != "Sanity"), aes(x = pcadims, y = mean / knn, color = method_type, 
+                                                          group = transformation_method, linetype = as.factor(m_num)), show.legend = FALSE) +
+    geom_point(aes(x = pcadims, y = mean / knn, color = method_type), show.legend = FALSE) +
     annotation_logticks(sides = "b") +
-    scale_color_discrete(labels = x_axis_labels, drop = FALSE) +
-    scale_x_log10(breaks = c(2, 5, 10, 20, 50, 100, 200, 400)) +
+    scale_color_manual(values = color_map[c(1,2,5)]) +
+    scale_x_log10(breaks = c(2, 5, 10, 20, 50, 100,  400, 800, 8569), labels = c(2, 5, 10, 20, 50, 100, 400, 800, "full\ndata")) +
     scale_y_continuous(expand = expansion(0)) +
-    labs(x = "#PCA Dimensions", y = "Mean KNN Recall",
+    scale_shape_manual(values = map_int(LETTERS[1:9], utf8ToInt), labels = x_axis_labels, drop = FALSE) +
+    facet_wrap(vars(method_type), ncol = 1, strip.position = "right") +
+    coord_cartesian(clip = "off") +
+    labs(x = "#PCA Dimensions", y = "KNN Recall",
          title = "",
-         subtitle = "Branched random tree") +
-    theme(axis.text.y = element_blank(), axis.title.y = element_blank(),
-          plot.margin = margin(t = 7, r = 7, b = 7, l = 3)) 
+         subtitle = "(2) Branched random walk") +
+    theme(axis.text.y = element_blank(), axis.title.y = element_blank(), panel.spacing.y = unit(2, "lines"),
+          plot.margin = margin(t = 7, r = 7, b = 7, l = 7)) 
 
+cowplot::plot_grid(p1, p2, nrow = 1, rel_widths = c(1.1, 1))
 
-legend <- cowplot::get_legend(p1 +
-                                guides(color = guide_legend(title = "", override.aes = list(size = 3),
-                                                            label.hjust = 0, label.theme =  element_text(size = 12))))
-
-cowplot::plot_grid(p1 + guides(color = FALSE), p2 + guides(color = FALSE), legend,
-                   nrow = 1, align = "hv", rel_widths = c(1.2, 1, 0.5))
-
-cowplot::save_plot("../output/simulated_data_benchmark_pca_dimensions.pdf", last_plot(), ncol = 2.5, base_asp = 1.2)
-
+cowplot::save_plot("../output/simulated_data_benchmark_pca_dimensions.pdf", last_plot(), base_width = 7.5, base_height = 8, scale = 1.2)
 ```
 
 
@@ -277,7 +402,7 @@ cowplot::save_plot("../output/simulated_data_benchmark_pca_dimensions.pdf", last
 
 # Session Info
 
-```{r}
+```{r session_info}
 sessionInfo()
 ```
 
