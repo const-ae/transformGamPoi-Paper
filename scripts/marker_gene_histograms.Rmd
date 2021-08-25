@@ -101,24 +101,29 @@ dim(subset_sce)
 
 
 ```{r}
-subset_sce <- scuttle::logNormCounts(subset_sce)
+assay(subset_sce, "logp1") <- transformGamPoi::shifted_log_transform(subset_sce, pseudo_count = 1, size_factors = sf)
+```
+
+```{r}
+colsums <- colSums2(counts(sce))
+assay(subset_sce, "logp_cpm") <- log1p(t(t(counts(subset_sce)) / colsums * 1e6))
 ```
 
 
 ```{r}
-assay(subset_sce, "logp_alpha") <- log(t(t(counts(subset_sce)) / sf) + 1/(4 * alpha))
+assay(subset_sce, "logp_alpha") <- transformGamPoi::shifted_log_transform(subset_sce, overdispersion = alpha, size_factors = sf)
 ```
 
 
 ```{r}
-assay(subset_sce, "acosh") <- acosh(2 * alpha * t(t(counts(subset_sce)) / sf) + 1)
+assay(subset_sce, "acosh") <- transformGamPoi::acosh_transform(subset_sce, overdispersion = alpha, size_factors = sf)
 ```
 
 
 ```{r}
 system.time(
   assay(subset_sce, "pearson") <- transformGamPoi::residual_transform(as.matrix(assay(subset_sce, "counts")), 
-                                                                   size_factors = sf, overdispersion = alpha,
+                                                                   size_factors = sf, overdispersion = alpha, clipping = TRUE,
                                                                    residual_type = "pearson", verbose = TRUE)
 )
 ```
@@ -182,13 +187,28 @@ sane_res <- run_sanity(as.matrix(assay(subset_sce)))
 ```
 
 
+```{r}
+find_break <- function(x, digits = 1){
+  stopifnot(length(x) == 1)
+  ax <- abs(x)
+  ord <- (floor(log10(ax)) - (digits-1))
+  sign(x) * (floor(ax / 10^ord) * 10^ord)
+}
+
+find_break(pi)
+find_break(17, digits = 3)
+find_break(pi, digits = 2)
+```
+
+
+
 ```{r make_plot, fig.width=12, fig.height=6}
 color_map <-  c("Delta method VST" = "#022B3A", "Residual VST" = "#1F7A8C", "Sanity" = "#A3C9A8",
                 "other" = "grey", "Raw Counts" = "#985277")
 
-method_labeller <- c("logp1" = "log(x+1)", "logp_alpha" = "log(x+1/(4*alpha))", "acosh" = "acosh(2*alpha*x+1)",
-                   "pearson" = "Pearson~Resid.", "rand_quantile" = "Rand.~Quant.~Resid.",
-                   "sanity" = "Sanity", counts = "Raw~Counts")
+method_labeller <- c("logp1" = "log(x+1)", "logp_cpm" = "log(CPM+1)", "logp_alpha" = "log(x+1/(4*alpha))", "acosh" = "acosh(2*alpha*x+1)",
+                   "pearson" = "Pearson~Resid.", "rand_quantile" = "Ra.~Qu.~Resid.",
+                   "sanity_dist" = "Sanity~Distance", "sanity_map" = "Sanity~MAP", counts = "Raw~Counts")
 
 
 
@@ -200,42 +220,46 @@ make_gene_hist2 <- function(gene_id, cell_types_of_interest, show_facet_label){
   tibble(cell_id = c(cells_of_interest, other_cells),
          cell_type_oi = rep(c(TRUE, FALSE), each = length(cells_of_interest))) %>%
     mutate(counts = assay(subset_sce, "counts")[gene_id, cell_id],
-           logp1 = assay(subset_sce, "logcounts")[gene_id, cell_id],
+           logp1 = assay(subset_sce, "logp1")[gene_id, cell_id],
+           logp_cpm = assay(subset_sce, "logp_cpm")[gene_id, cell_id],
            logp_alpha = assay(subset_sce, "logp_alpha")[gene_id, cell_id],
            acosh = assay(subset_sce, "acosh")[gene_id, cell_id],
            rand_quantile = assay(subset_sce, "rand_quantile")[gene_id, cell_id],
            pearson = assay(subset_sce, "pearson")[gene_id, cell_id],
-           sanity = rnorm(n = length(cell_id), mean = sane_res$mean[gene_id, cell_id], sd = sane_res$sd[gene_id, cell_id]),
-           # pearson =GetAssayData(seu, "scale.data")[gene_name, cell_id]
+           sanity_dist = rnorm(n = length(cell_id), mean = sane_res$mean[gene_id, cell_id], sd = sane_res$sd[gene_id, cell_id]),
+           sanity_map = sane_res$mean[gene_id, cell_id]
            ) %>%
-    pivot_longer(c(counts, logp1, logp_alpha, acosh, rand_quantile, pearson, sanity), names_to = "transformation", values_to = "value") %>%
+    pivot_longer(c(counts, logp1, logp_cpm, logp_alpha, acosh, rand_quantile, pearson, sanity_dist, sanity_map), names_to = "transformation", values_to = "value") %>%
     mutate(transformation_label = as.factor(method_labeller[transformation])) %>%
-    mutate(transformation = factor(transformation, levels  = c("counts", "logp1", "logp_alpha", "acosh", "pearson", "rand_quantile", "sanity"))) %>%
+    mutate(transformation = factor(transformation, levels  = c("counts", "logp1", "logp_cpm", "logp_alpha", "acosh", "pearson", "rand_quantile", "sanity_map", "sanity_dist"))) %>%
     mutate(transformation_label = fct_reorder(transformation_label, as.numeric(transformation))) %>%
     ggplot(aes(x = value)) +
       # geom_histogram(aes(fill = fill_color), bins = 30,  alpha = 0.8, position = "identity") +
       geom_histogram(aes(fill = cell_type_oi), bins = 30, position = "identity", alpha = 0.6) +
+      geom_blank(data = tibble(value = 0), y = 0) +
       facet_wrap(vars(transformation_label), scales = "free", nrow = 1, labeller = label_parsed) +
-      scale_y_continuous(expand = expansion(mult = c(0.015, NA)), breaks = function(x){
-        ord <- floor(log10(max(x)))
-        c(0, floor(max(x) / 10^ord) * 10^ord)
+      scale_y_continuous(expand = expansion(mult = c(0.015, NA))) +
+      # scale_x_continuous(n.breaks = 2) +
+      scale_x_continuous(breaks = function(x){
+         digits <- 1
+         ax <- max(abs(max(x)), abs(min(x)))
+         ord <- (floor(log10(ax)) - (digits-1))
+         c(sign(min(x)) * (floor(abs(min(x)) / 10^ord) * 10^ord),
+           max(sign(max(x)) * (floor(abs(max(x)) / 10^ord) * 10^ord), 0))
       }) +
-      scale_x_continuous(n.breaks = 4) +
       scale_fill_manual(values = c("FALSE"="grey", "TRUE"="#985277"),
                         labels = c("FALSE"="other cells",  "TRUE"="cells of the cell type associated with the marker gene")) +
-      # scale_fill_manual(values = color_map, breaks = c("Raw Counts", "Delta method VST", "Residual VST", "Sanity")) +
       coord_cartesian(clip = "off") +
       labs(x = "", y = gene_id) +
       cowplot::theme_cowplot() +
       theme(strip.background = element_blank(),
-            strip.text = if(show_facet_label) NULL else element_blank(),
+            strip.text = if(show_facet_label) element_text(size = 10) else element_blank(),
             axis.text.y = element_blank(), axis.ticks.y = element_blank(),
             panel.spacing.x = unit(10, "pt"),
             plot.title = element_blank(),
             plot.margin = margin(t = 0, r = 7, b = 0, l = 7, unit = "pt"),
             axis.title.x = element_blank())
 }
-
 
 hists <- list(make_gene_hist2(gene_id = "Sftpc", cell_types_of_interest = c("Type_2_pneumocytes"), show_facet_label = TRUE),
               make_gene_hist2(gene_id = "Scgb1a1", cell_types_of_interest = c("Club_cells", "Goblet_cells"), show_facet_label = FALSE),
@@ -244,7 +268,7 @@ hists <- list(make_gene_hist2(gene_id = "Sftpc", cell_types_of_interest = c("Typ
 
 legend <- cowplot::get_legend(hists[[1]] + theme(legend.position = "bottom") +
                                 guides(fill = guide_legend(title = "", override.aes = list(size = 3, alpha = 1),
-                                                           label.hjust = 0, label.theme =  element_text(size = 8),
+                                                           label.hjust = 0, label.theme =  element_text(size = 10),
                                                            reverse = TRUE)))
 
 title <- cowplot::ggdraw() +
@@ -258,7 +282,8 @@ cowplot::plot_grid(
                      nrow =1, rel_widths = c(1, 1, 1)),
   ncol = 1, rel_heights = c(0.07, 1, 0.1)
 )
-cowplot::save_plot("../output/ageing_mice_gene_hists.pdf", last_plot(), nrow = 3, ncol = 7, base_height = 1.5, base_asp = 1.3)
+
+cowplot::save_plot("../output/ageing_mice_gene_hists.pdf", last_plot(), nrow = 3, ncol = 9, base_height = 1.5, base_asp = 0.8)
 ```
 
 
