@@ -1,0 +1,136 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+
+
+```{r load_packages}
+library(tidyverse)
+library(MatrixGenerics)
+```
+
+
+# Benchmark Results (from server)
+
+```{r}
+result <- readRDS("../data/deep_seq-result-896165-overlap.Rds")
+```
+
+
+```{r dataset_annotation}
+dataset_annotation <- enframe(c(msSCRB = "mcSCRB-seq of JM8 cells", smartSeq3_hek = "Smart-seq3 of HEK cells",
+                            smartSeq3_fibro = "Smart-seq3 of Fibroblasts (1)", smartSeq3_fibro_alt = "Smart-seq3 of Fibroblasts (2)"),
+                          name = "dataset", value = "dataset_label") %>%
+  mutate(dataset_label = factor(dataset_label, levels = dataset_label))
+```
+
+
+```{r method_annotation}
+methods_of_interest <- factor(c("logp1", "logp_cpm", "logp_alpha", "acosh", 
+                                "pearson_clipping", "rand_quantile", 
+                                "sanity_vst", "sanity_dist"))
+
+method_annotation <- tibble(method = methods_of_interest) %>%
+  mutate(method_type = case_when(
+    method %in% c("sanity_dist", "sanity_vst") ~ "Sanity",
+    method %in% c("logp1", "logp_cpm", "logp_alpha", "acosh") ~ "Delta method VST",
+    method %in% c("pearson_clipping", "rand_quantile") ~ "Residual VST",
+    TRUE ~ NA_character_
+  )) %>%
+  mutate(method_type = factor(method_type, levels = c("Delta method VST", "Residual VST",
+                                                      "Delta method VST + PCA", "Residual VST + PCA", "Sanity")))
+
+```
+
+```{r color_definitions}
+# method_type -> color
+color_map <-  c("Delta method VST" = "#1f78b4", "Residual VST" = "#33a02c", 
+                "Sanity" = "#fb9a99")
+```
+
+```{r axis_labels}
+x_axis_labels <- c("logp1" = expression(log(x+1)), "logp_cpm" = expression(log(CPM+1)), 
+                   "logp_alpha" = expression(log(x+1/(4*alpha))), "acosh" = expression(acosh(2*alpha*x+1)),
+                   "pearson_clipping" = "Pearson Resid", "rand_quantile" = "Rand. Quant. Resid",
+                   "sanity_vst" = "Sanity MAP + PCA", "sanity_dist" = "Sanity Distance")
+```
+
+```{r}
+method_type_labels <- enframe(c("Delta method VST\n+ PCA (15)" = 2.5, "Residual VST\n+ PCA (15)" = 6.5, 
+          "Sanity" = 9.5), name = "method_type", value = "x_location") %>%
+  mutate(dataset_label = list(c("Smart-seq3 of Fibroblasts (1)", "Smart-seq3 of Fibroblasts (2)"))) %>%
+  unnest(dataset_label) %>%
+  mutate(dataset_label = factor(dataset_label, levels = levels(dataset_annotation$dataset_label)))
+```
+
+
+```{r}
+res <- result %>%
+  mutate(recall = map2(overlap, common_knns, function(o, ck){
+      enframe(map_dbl(o, function(.o) median(.o / lengths(ck), na.rm =  TRUE)))
+  })) %>%
+  unnest(recall) %>%
+  dplyr::select(- c(overlap, common_knns)) %>%
+  dplyr::rename(method = name) %>%
+  filter(method %in% methods_of_interest) %>%
+  tidylog::left_join(dataset_annotation, by = "dataset") %>%
+  tidylog::left_join(method_annotation, by = "method") %>%
+  mutate(method = factor(method, levels = methods_of_interest)) 
+
+res
+```
+
+
+```{r}
+p1 <-  res %>%
+  ggplot(aes(x = method, y = value)) +
+    geom_hline(yintercept = seq(0, 1, by = 0.25), color = "lightgrey", alpha = 0.2) +
+    geom_hline(yintercept = seq(0, 1, by = 0.5), color = "lightgrey", alpha = 0.8) +
+    geom_vline(xintercept = c(1, 2, 3, 4, 6, 7, 9, 10), color = "lightgrey", alpha = 0.2) +
+    stat_summary(geom = "pointrange", aes(color = method_type), fun.data = mean_sdl, show.legend = FALSE) +
+    geom_text(data = method_type_labels, aes(x = x_location, y = 0.21, label = method_type), 
+            hjust = 0.5, vjust = 1, size = 2.9, lineheight = 0.85) +
+    facet_wrap(vars(dataset_label), nrow = 2) +
+    gggroupedscale::scale_x_grouped_discrete(labels = x_axis_labels, grouping = function(x){
+      fct_drop(deframe(method_annotation)[x])
+    }, gap_size = 1) +
+    scale_y_continuous(expand = expansion(0)) +
+    scale_color_manual(values = color_map) +
+    coord_cartesian(clip = "off") +
+    cowplot::theme_cowplot() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+          strip.background = element_blank(),
+          panel.spacing.y = unit(0.2, "cm"),
+          plot.title = element_blank()) +
+    labs(x = "", y = "Recall", title = "")
+
+```
+
+
+
+```{r}
+overview_figure <- magick::image_read_pdf("../output/deeply_sequenced_benchmark_overview/deeply_sequenced_benchmark_overview.pdf")
+p2 <- cowplot::ggdraw() + cowplot::draw_image(overview_figure, scale = 0.95)
+
+title <- cowplot::ggdraw() +
+  cowplot::draw_figure_label("K-nearest neighbor recall on real data",
+                             fontface = "bold", size = 16) +
+  theme(plot.margin = unit(c(7, 0, 5, -23), "pt"))
+
+cowplot::plot_grid(
+  title,
+  cowplot::plot_grid(cowplot::plot_grid(p2, NULL, ncol = 1, rel_heights = c(1, 0.2)),
+                     p1, rel_widths = c(0.4, 0.6), labels = c("A", "B")),
+  ncol = 1, rel_heights = c(0.07, 1)
+)
+
+
+cowplot::save_plot("../output/deeply_sequenced_benchmark.pdf", last_plot(), base_width = 9.268, base_height = 5.1)
+```
+
+
+
+
+
