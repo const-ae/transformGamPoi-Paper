@@ -63,8 +63,13 @@ if(! file.exists("../data/svensson_2017_2.h5ad")){
 if(! file.exists("../data/nih3t3.h5ad")){
   download.file("https://data.caltech.edu/tindfiles/serve/a448e98e-89cd-47b3-a134-803bbde29781/", "../data/nih3t3.h5ad")
 }
-if(! file.exists("../data/hek293t.h5ad")){
-  download.file("https://data.caltech.edu/tindfiles/serve/b2758046-9247-43ab-b8f0-68882b4f39a3/", "../data/hek293t.h5ad")
+if(! file.exists("../data/hek-smartseq3.Rds")){
+  download.file("https://www.ebi.ac.uk/arrayexpress/files/E-MTAB-8735/E-MTAB-8735.processed.3.zip", "../data/smart_seq3_data.zip")
+  unzip("../data/smart_seq3_data.zip", files = "Smartseq3.HEK.cleanup.UMIcounts.txt", exdir = "../data")
+  raw_data <- read.delim("../data/Smartseq3.HEK.cleanup.UMIcounts.txt") %>%
+    as.matrix() %>%
+    as("dgCMatrix")
+  saveRDS(SingleCellExperiment(list(counts = raw_data), rowData = DataFrame(gene_id = rownames(raw_data))), "../data/hek-smartseq3.Rds")
 }
 if(! file.exists("../data/nci-h1975.Rds")){
   download.file("https://github.com/LuyiTian/sc_mixology/raw/master/data/csv/sc_10x.metadata.csv.gz", "../data/nci-h1975-metadata.csv.gz") 
@@ -338,7 +343,8 @@ p1 <- last_plot()
 
 
 ```{r}
-se <- zellkonverter::readH5AD("../data/hek293t.h5ad")
+# se <- zellkonverter::readH5AD("../data/hek293t.h5ad")
+se <- readRDS("../data/hek-smartseq3.Rds")
 
 sf <- colSums2(assay(se))
 thres <- quantile(sf, 0.5) * c(1, 1.3)
@@ -360,7 +366,7 @@ glmGamPoi::glm_gp(se_red[mu > 1, ], overdispersion = "global", size_factors = sf
 ```
 
 ```{r}
-tibble(mu, var, cell_cycle_gene = rownames(se_red) %in% paste0("hg19_", human_cell_cycle_genes)) %>%
+tibble(mu, var, cell_cycle_gene = rownames(se_red) %in% human_cell_cycle_genes) %>%
   mutate(mu_pred = mu, mu_sq_pred = mu^2) %>%
   ggplot(aes(x = mu, y = var)) +
     geom_line(data = poisson_pred, aes(group = factor), color = "lightgray", size = 0.1) +
@@ -381,7 +387,7 @@ tibble(mu, var, cell_cycle_gene = rownames(se_red) %in% paste0("hg19_", human_ce
                              expression(10),  expression(10^3), expression(10^5)),
                   name = expression(Variance)) +
     scale_color_manual(values = c("TRUE" = "#87172f", "FALSE" = "black")) +
-    ggtitle("HEK 293T Cells", subtitle = "") +
+    ggtitle("HEK Cells (Smart-seq3)", subtitle = "") +
     theme(plot.subtitle = ggtext::element_markdown())
 
 p2 <- last_plot()
@@ -499,7 +505,7 @@ p4 <- last_plot()
 
 ```{r, fig.width = 12, fig.heigh = 8}
 p_tech <- cowplot::plot_grid(tech_p1, tech_p2, tech_p3, NULL, nrow = 1, align = "h")
-p_bio <- cowplot::plot_grid(p1, p2, p3, p4, nrow = 1, align = "h")
+p_bio <- cowplot::plot_grid(p1, p3, p4, p2, nrow = 1, align = "h")
 
 tech_title <- cowplot::ggdraw() + cowplot::draw_label("(A) Droplets with RNA solution (technical control)", 
                                                       fontface = "bold", x = 0.02, hjust = 0, size = 18)
