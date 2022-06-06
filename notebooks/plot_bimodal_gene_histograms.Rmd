@@ -1,0 +1,206 @@
+---
+title: "R Notebook"
+---
+
+
+
+
+```{r}
+library(SingleCellExperiment)
+library(tidyverse)
+`%|%` <- rlang::`%|%`
+source("utils.R")
+source("annotation_helper.R")
+
+source("../benchmark/src/transformations/transformation_helper.R")
+.SANITY_FOLDER <- "/Users/ahlmanne/prog/experiments/Sanity"
+set.seed(1)
+```
+
+
+
+
+```{r}
+if(! file.exists("../extra_data/mouse_lung_single_cell.RData")){
+  download.file("https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSE124872&format=file&file=GSE124872%5Fraw%5Fcounts%5Fsingle%5Fcell%2ERData%2Egz", "../extra_data/mouse_lung_single_cell.RData.gz")
+  R.utils::gunzip("../extra_data/mouse_lung_single_cell.RData.gz")
+}
+if(! file.exists("../extra_data/mouse_lung_single_cell_metadata.csv")){
+  download.file("https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSE124872&format=file&file=GSE124872%5FAngelidis%5F2018%5Fmetadata%2Ecsv%2Egz", "../extra_data/mouse_lung_single_cell_metadata.csv.gz")
+  R.utils::gunzip("../extra_data/mouse_lung_single_cell_metadata.csv.gz")
+}
+
+load("../extra_data/mouse_lung_single_cell.RData")
+metadat <- read_csv("../extra_data/mouse_lung_single_cell_metadata.csv")
+
+col_data <- metadat %>%
+  transmute(barcode = str_split_fixed(...1, ":", 3)[,3],
+            mouse_id = identifier, age = grouping, cell_type = celltype) %>%
+  mutate(cell_id = paste0(mouse_id, ":", barcode))
+
+tmp <- tibble(X1 = colnames(raw_counts)) %>%
+  separate(X1, c("mouse_id", "barcode"), sep = ":")
+stopifnot(tmp$barcode == col_data$barcode)
+
+
+colnames(raw_counts) <- col_data$cell_id
+colnames(raw_counts) <- col_data$cell_id
+sce <- SingleCellExperiment(list(counts = raw_counts), colData = col_data)
+
+total_umi <- colSums2(assay(sce, "counts"))
+sce <- sce[rowSums2(assay(sce, "counts")) > 0, total_umi > median(total_umi) / 10 & total_umi < median(total_umi) * 10]
+
+qcstats <- scuttle::perCellQCMetrics(sce, 
+                         subsets = list(Mito = (rowData(sce)$chromosome == "MT") %|% FALSE))
+filtered <- scuttle::quickPerCellQC(qcstats, percent_subsets="subsets_Mito_percent")
+sce <- sce[, ! filtered$discard]
+sce
+```
+
+
+
+
+
+```{r}
+mean_gene_expr <- rowMeans2(assay(sce))
+subset_sce <- sce[rank(-mean_gene_expr) <= 100 | 
+                      rownames(sce) %in% c("Sftpc", "Scgb1a1", "Ear2"), ]
+dim(subset_sce)
+```
+
+
+```{r}
+size_factors <- colSums2(assay(sce, "counts"))
+size_factors <- size_factors / mean(size_factors)
+summary(size_factors)
+
+Y <- as.matrix(assay(subset_sce, "counts"))
+Y <- Y[rowSums2(Y) > 0, ]
+overdisp <- glmGamPoi::glm_gp(subset_sce, overdispersion = "global", overdispersion_shrinkage = FALSE, on_disk = FALSE)$overdispersions[1]
+```
+
+```{r}
+transformed_dat <- list()
+for(trans in names(all_transformations)){
+  if(trans == "sanity_dists"){
+    print(paste0("Skip: ", trans))
+  }else{
+    print(paste0("Applying: ", trans))
+    transformed_dat[[trans]] <- all_transformations[[trans]](Y, sf = size_factors, alpha = overdisp)
+  }
+}
+```
+
+```{r}
+sanity_prob_fnc  <- function(UMI, sf, alpha){
+  UMI <- as.matrix(UMI)
+  colnames(UMI) <- paste0("Cell_", seq_len(ncol(UMI)))
+  rownames(UMI) <- paste0("Gene_", seq_len(nrow(UMI)))
+  on.exit({
+    if(exists("sanity_map")){
+      sanity_map <- get("sanity_map")
+      if(file.exists(sanity_map$outdir)){
+        file.remove(list.files(sanity_map$outdir, full.names = TRUE))
+        file.remove(sanity_map$outdir)
+      }
+    }
+  })
+  sanity_map <- run_sanity(UMI, n_threads = 6)
+  sanity_map
+}
+
+sanity_prob <- sanity_prob_fnc(Y, size_factors, alpha = overdisp)
+```
+
+
+```{r}
+saveRDS(list(transformed_dat = transformed_dat, sanity_prob = sanity_prob, raw = Y, cell_type = subset_sce$cell_type),
+        "../extra_data/mouse_lung_transformed.Rds")
+# tmp <- readRDS( "../extra_data/mouse_lung_transformed.Rds")
+# transformed_dat <- tmp$transformed_dat
+# sanity_prob <- tmp$sanity_prob
+```
+
+
+
+```{r}
+gene_id <- "Sftpc"
+cells_of_interest <- subset_sce$cell_id[subset_sce$cell_type %in% "Type_2_pneumocytes"]
+other_cells <- sample(setdiff(subset_sce$cell_id, cells_of_interest), size = length(cells_of_interest), replace = FALSE)
+
+res <- enframe(transformed_dat, name = "transformation", value = "transformed_data") %>%
+  add_row(transformation = "sanity_dists", transformed_data = list(sanity_prob)) %>%
+  add_row(transformation = "raw", transformed_data = list(Y)) %>%
+  mutate(gene_expr = map2(transformed_data, transformation, function(dat, trans){
+    if(trans == "sanity_dists"){
+      stopifnot(all(dim(sanity_prob$mean) == dim(Y)))
+      rownames(sanity_prob$mean) <- rownames(Y)
+      colnames(sanity_prob$mean) <- colnames(Y)
+      rownames(sanity_prob$sd) <- rownames(Y)
+      colnames(sanity_prob$sd) <- colnames(Y)
+      sanity_prob$mean[gene_id, c(cells_of_interest, other_cells)] + rnorm(n = length(cells_of_interest) * 2, mean = 0, sd = sanity_prob$sd[gene_id, c(cells_of_interest, other_cells)])
+    }else{
+      stopifnot(all(dim(dat) == dim(Y)))
+      rownames(dat) <- rownames(Y)
+      colnames(dat) <- colnames(Y)
+      dat[gene_id, c(cells_of_interest, other_cells)]
+    }
+  }),
+  cell_of_interest = map(transformation, ~ rep(c(TRUE, FALSE), each = length(cells_of_interest)))) %>%
+  dplyr::select(transformation, gene_expr, cell_of_interest) %>%
+  unnest(c(gene_expr, cell_of_interest))
+```
+
+
+```{r}
+pl_list <- res %>%
+  mutate(transformation2 = factor(transformation, levels = c(as.character(trans_families$transformation), "raw")),
+       transformation_labelled = factor(as.character(c(trans_labels, raw = "Raw")[as.character(transformation2)]), 
+                                        levels = as.character(c(trans_labels, raw = "Raw")[c(levels(trans_families$transformation), "raw")]))) %>% 
+  left_join(add_row(trans_families, transformation = "raw", family = "raw")) %>%
+  mutate(family = factor(family, levels = c("raw", "delta_method", "glm_residual", "latent_expr"))) %>%
+  group_by(family) %>%
+  group_map(function(dat, key){
+    cat <- key[[1]][1]
+    ggplot(dat, aes(x = gene_expr)) +
+        geom_histogram(aes(fill = cell_of_interest), bins = 30, position = "identity", alpha = 0.6, show.legend = FALSE) +
+        geom_blank(data = tibble(gene_expr = 0)) +
+        ggh4x::facet_wrap2(vars(transformation_labelled), ncol = 4, 
+                         strip = ggh4x::strip_vanilla(clip = "off"), scales ="free", trim_blank = FALSE) +
+        scale_y_continuous(expand = expansion(mult = c(0.015, NA))) +
+        scale_x_continuous(breaks = function(x){
+           digits <- 1
+           ax <- max(abs(max(x)), abs(min(x)))
+           ord <- (floor(log10(ax)) - (digits-1))
+           c(sign(min(x)) * (floor(abs(min(x)) / 10^ord) * 10^ord),
+             max(sign(max(x)) * (floor(abs(max(x)) / 10^ord) * 10^ord), 0))
+        }) +
+        scale_fill_manual(values = c("FALSE"="grey", "TRUE"="#985277"),
+                          labels = c("FALSE"="other cells",  "TRUE"="cells of the cell type associated with the marker gene")) +
+        coord_cartesian(clip = "off") +
+        labs(x = "", y = "", 
+             title = if(cat ==  "raw") "Raw" else trans_families_labels[as.character(cat)]) +
+        theme(strip.background = element_blank(),
+              strip.text = element_text(size = font_size_small),
+              axis.text.y = element_blank(), axis.ticks.y = element_blank(),
+              panel.spacing.x = unit(2.5, "mm"),
+              axis.title.x = element_blank())
+  })
+
+comb_pl <- cowplot::plot_grid(plotlist = pl_list, nrow = 4, ncol = 1, align = "vh", axis = "l", rel_heights = c(1.1, 2, 2, 1.1))
+comb_pl <- cowplot::ggdraw(comb_pl) +
+  cowplot::draw_label(x = 0.38, y = 0.735, label = "Type II pneumocytes", size = font_size_small) +
+  cowplot::draw_label(x = 0.365, y = 0.71, label = "Other cells", size = font_size_small) +
+  cowplot::draw_line(x = c(0.4, 0.46), y = c(0.728, 0.68), size = 0.2) +
+  cowplot::draw_line(x = c(0.365, 0.38), y = c(0.703, 0.68), size = 0.2)
+
+save_plot("../output/suppl-bimodal_expr_stabilization.pdf", comb_pl, width = 150, height = 160, units = "mm", latex_support = TRUE)
+```
+
+
+
+# Session Info
+
+```{r}
+sessionInfo()
+```

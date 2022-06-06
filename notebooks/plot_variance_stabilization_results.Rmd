@@ -1,0 +1,156 @@
+---
+title: "R Notebook"
+---
+
+```{r}
+library(tidyverse)
+library(tidylog)
+library(SingleCellExperiment)
+source("utils.R")
+source("annotation_helper.R")
+
+source("../benchmark/src/transformations/transformation_helper.R")
+source("../benchmark/src/consistency_benchmark/download_helper.R")
+data_folder <- "../extra_data"
+.SANITY_FOLDER <- "/Users/ahlmanne/prog/experiments/Sanity"
+set.seed(1)
+```
+
+
+
+```{r}
+sce <- get_GSE130931_data()
+sce <- sce[sample.int(nrow(sce), 5000), sample.int(ncol(sce), 400)]
+
+size_factors <- colSums2(assay(sce, "counts"))
+size_factors <- size_factors / mean(size_factors)
+summary(size_factors)
+
+Y <- as.matrix(assay(sce, "counts"))
+Y <- Y[rowSums2(Y) > 0, ]
+rownames(Y) <- paste0("Gene_", seq_len(nrow(Y)))
+colnames(Y) <- paste0("Cell_", seq_len(ncol(Y)))
+overdisp <- glmGamPoi::glm_gp(sce, overdispersion = "global", overdispersion_shrinkage = FALSE, on_disk = FALSE)$overdispersions[1]
+```
+
+
+```{r}
+transformed_dat <- list()
+for(trans in names(all_transformations)){
+  if(trans == "sanity_dists"){
+    print(paste0("Skip: ", trans))
+  }else{
+    print(paste0("Applying: ", trans))
+    transformed_dat[[trans]] <- all_transformations[[trans]](Y, sf = size_factors, alpha = overdisp)
+  }
+}
+```
+
+
+
+
+```{r}
+sanity_prob_fnc  <- function(UMI, sf, alpha){
+  UMI <- as.matrix(UMI)
+  colnames(UMI) <- paste0("Cell_", seq_len(ncol(UMI)))
+  rownames(UMI) <- paste0("Gene_", seq_len(nrow(UMI)))
+  on.exit({
+    if(exists("sanity_map")){
+      sanity_map <- get("sanity_map")
+      if(file.exists(sanity_map$outdir)){
+        file.remove(list.files(sanity_map$outdir, full.names = TRUE))
+        file.remove(sanity_map$outdir)
+      }
+    }
+  })
+  sanity_map <- run_sanity(UMI, n_threads = 6)
+  sanity_map
+}
+
+sanity_prob <- sanity_prob_fnc(Y, size_factors, alpha = overdisp)
+```
+
+
+```{r}
+saveRDS(list(transformed_dat = transformed_dat, sanity_prob = sanity_prob ,raw = Y), "../extra_data/GSE130931_transformed.Rds")
+# tmp <- readRDS( "../extra_data/GSE130931_transformed.Rds")
+# transformed_dat <- tmp$transformed_dat
+# sanity_prob <- tmp$sanity_prob
+```
+
+
+```{r}
+mean_var_df <- enframe(transformed_dat, name = "transformation", value = "transformed_data") %>%
+  add_row(transformation = "sanity_dists", transformed_data = list(sanity_prob)) %>%
+  add_row(transformation = "raw", transformed_data = list(Y)) %>%
+  mutate(gene_measures = map2(transformed_data, transformation, function(dat, trans){
+    if(trans == "sanity_dists"){
+      tibble(gene_mean = rowMeans2(Y),
+             gene_var = rowVars(matrix(rnorm(n = nrow(dat$mean) * ncol(dat$mean),
+                                             mean = dat$mean, sd = dat$sd), 
+                                       nrow = nrow(dat$mean), ncol = ncol(dat$mean))))
+    }else if(str_detect(trans, "_hvg") || trans == "sctransform"){
+      gene_oi <- as.integer(str_replace(rownames(dat), "Gene_", ""))
+      tibble(gene_mean = rowMeans2(Y, rows = gene_oi), gene_var = rowVars(dat))
+    }else{
+      tibble(gene_mean = rowMeans2(Y), gene_var = rowVars(dat))
+    }
+  })) %>%
+  dplyr::select(transformation, gene_measures) %>%
+  unnest(gene_measures)
+```
+
+
+
+```{r}
+limits <- tibble(raw = 5e4, 
+                 logp1 = 5,  acosh = 5, logp_alpha = 5, logp_cpm = 15, logp1_size_normed = 10, logp1_hvg = 5, logp1_zscore = 5, logp1_hvg_zscore = 5,
+                 pearson_clip = 5, sctransform = 5, pearson_analytic = 5, rand_quantile = 5, pearson_clip_hvg = 5, pearson_clip_zscore = 5, pearson_clip_hvg_zscore = 5, pearson = 15,
+                 sanity_map = 0.8, sanity_dists = 5, dino = 0.6, normalisr_normvar = 40) %>%
+  pivot_longer(everything(), names_to = "transformation", values_to = "ceiling")
+
+mean_var_plots <- mean_var_df %>%
+  mutate(transformation2 = factor(transformation, levels = c(as.character(trans_families$transformation), "raw")),
+         transformation_labelled = factor(as.character(c(trans_labels, raw = "Raw")[as.character(transformation2)]), 
+                                          levels = as.character(c(trans_labels, raw = "Raw")[c(levels(trans_families$transformation), "raw")]))) %>% 
+  left_join(add_row(trans_families, transformation = "raw", family = "raw")) %>%
+  mutate(family = factor(family, levels = c("raw", "delta_method", "glm_residual", "latent_expr"))) %>%
+  left_join(limits) %>%
+  mutate(gene_var = ifelse(gene_var > ceiling, Inf, gene_var)) %>%
+  group_by(family) %>%
+  group_map(function(dat, key){
+    cat <- key[[1]][1]
+    ggplot(dat, aes(x = gene_mean, y = gene_var))+ 
+      ggrastr::rasterise(geom_point(size = 0.05), dpi = 300) +
+      geom_blank(aes(x = 1, y = ceiling)) +
+      ggh4x::facet_wrap2(vars(transformation_labelled), ncol = 4, 
+                         strip = ggh4x::strip_vanilla(clip = "off"), scales ="free_y", trim_blank = FALSE) +
+      scale_x_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
+            labels = scales::trans_format("log10", scales::math_format(10^.x))) +
+      scale_y_continuous(limits = c(0, NA),expand = expansion(mult = c(0, 0.05)),
+                   breaks = function(x){
+                      signif_dig <- 1
+                      ord <- floor(log10(max(x)))
+                      c(0, floor(max(x) / 10^(ord-signif_dig+1)) * 10^(ord-signif_dig+1))
+                    }) +
+      coord_cartesian(clip = "off") +
+      labs(x = "Gene Mean (log-scale)", y = "Variance", title = if(cat ==  "raw") "Raw" else trans_families_labels[as.character(cat)]) +
+      theme(strip.text = element_text(size = font_size_small),
+            strip.background = element_blank()) 
+  })
+
+cowplot::plot_grid(plotlist = mean_var_plots, nrow = 4, align = "v", axis = "l", rel_heights = c(1.2, 2, 2, 1.2))
+save_plot("../output/suppl-mean_var_relation.pdf", last_plot(), width = 150, height = 180, units = "mm", latex_support = TRUE)
+```
+
+
+
+
+# Session Info
+
+```{r}
+sessionInfo()
+```
+
+
+

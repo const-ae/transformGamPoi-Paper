@@ -1,0 +1,134 @@
+simulation:
+  input_data: 
+    simulator: [muscat, dyngen, linear_walk, random_walk, scDesign2]
+    seed: [1, 2, 3, 4, 5]
+  knn_construction: 
+    knn: [10, 50, 100]
+    pca: [5, 10, 20, 50, 100, 200, 1000, 100000]
+    transformations:  
+      - {name: logp1, alpha: ["FALSE"]}
+      - {name: logp1_hvg, alpha: ["FALSE"]}
+      - {name: logp1_zscore, alpha: ["FALSE"]}
+      - {name: logp1_hvg_zscore, alpha: ["FALSE"]}
+      - {name: logp_cpm, alpha: ["FALSE"]}
+      - {name: logp1_size_normed, alpha: ["FALSE"]}
+      - {name: acosh, alpha: ["0.05", "0", "TRUE"]} 
+      - {name: logp_alpha, alpha: ["0.05", "0", "TRUE"]} 
+      - {name: pearson, alpha: ["0.05", "0", "TRUE"]} 
+      - {name: pearson_clip, alpha: ["0.05", "0", "TRUE"]} 
+      - {name: pearson_clip_hvg, alpha: ["0.05", "0", "TRUE"]} 
+      - {name: pearson_clip_zscore, alpha: ["0.05", "0", "TRUE"]} 
+      - {name: pearson_clip_hvg_zscore, alpha: ["0.05", "0", "TRUE"]} 
+      - {name: pearson_analytic, alpha: ["0.05", "0", "TRUE"]} 
+      - {name: sctransform, alpha: ["0.05", "0", "TRUE"]} 
+      - {name: rand_quantile, alpha: ["0.05", "0", "TRUE"]} 
+      - {name: dino, alpha: ["FALSE"]}
+      - {name: normalisr_normvar, alpha: ["FALSE"]}
+      - {name: sanity_map, alpha: ["FALSE"]}
+      - {name: sanity_dists, alpha: ["FALSE"]}
+      
+simulation_for_stratification:
+  input_data: 
+    simulator: [muscat, dyngen, linear_walk, random_walk, scDesign2]
+    seed: [1]
+  knn_construction: 
+    knn: [50]
+    pca: [50]
+    transformations:  
+      - {name: logp1, alpha: ["FALSE"]}
+      - {name: logp1_hvg, alpha: ["FALSE"]}
+      - {name: logp1_zscore, alpha: ["FALSE"]}
+      - {name: logp1_hvg_zscore, alpha: ["FALSE"]}
+      - {name: logp_cpm, alpha: ["FALSE"]}
+      - {name: logp1_size_normed, alpha: ["FALSE"]}
+      - {name: acosh, alpha: ["0.05", "0", "TRUE"]} 
+      - {name: logp_alpha, alpha: ["0.05", "0", "TRUE"]} 
+      - {name: pearson, alpha: ["0.05", "0", "TRUE"]} 
+      - {name: pearson_clip, alpha: ["0.05", "0", "TRUE"]} 
+      - {name: pearson_clip_hvg, alpha: ["0.05", "0", "TRUE"]} 
+      - {name: pearson_clip_zscore, alpha: ["0.05", "0", "TRUE"]} 
+      - {name: pearson_clip_hvg_zscore, alpha: ["0.05", "0", "TRUE"]} 
+      - {name: pearson_analytic, alpha: ["0.05", "0", "TRUE"]} 
+      - {name: sctransform, alpha: ["0.05", "0", "TRUE"]} 
+      - {name: rand_quantile, alpha: ["0.05", "0", "TRUE"]} 
+      - {name: dino, alpha: ["FALSE"]}
+      - {name: normalisr_normvar, alpha: ["FALSE"]}
+      - {name: sanity_map, alpha: ["FALSE"]}
+      - {name: sanity_dists, alpha: ["FALSE"]}
+  
+  
+consistency:
+  input_data: 
+    dataset: [GSE142647, GSE178765, GSE179831, GSE164017, GSE150068, GSE130931, GSE163505, GSE158941, GSE179714, GSE184806]
+    seed: [1, 2, 3, 4, 5]
+  knn_construction: 
+    knn: [10, 50, 100]
+    pca: [5, 10, 50, 100]
+    transformations:  
+      - {name: logp1, alpha: ["FALSE"]}
+      - {name: logp1_hvg, alpha: ["FALSE"]}
+      - {name: logp1_zscore, alpha: ["FALSE"]}
+      - {name: logp1_hvg_zscore, alpha: ["FALSE"]}
+      - {name: logp_cpm, alpha: ["FALSE"]}
+      - {name: logp1_size_normed, alpha: ["FALSE"]}
+      - {name: acosh, alpha: ["0.05", "0", "TRUE"]} 
+      - {name: logp_alpha, alpha: ["0.05", "0", "TRUE"]} 
+      - {name: pearson, alpha: ["0.05", "0", "TRUE"]} 
+      - {name: pearson_clip, alpha: ["0.05", "0", "TRUE"]} 
+      - {name: pearson_clip_hvg, alpha: ["0.05", "0", "TRUE"]} 
+      - {name: pearson_clip_zscore, alpha: ["0.05", "0", "TRUE"]} 
+      - {name: pearson_clip_hvg_zscore, alpha: ["0.05", "0", "TRUE"]} 
+      - {name: pearson_analytic, alpha: ["0.05", "0", "TRUE"]} 
+      - {name: sctransform, alpha: ["0.05", "0", "TRUE"]} 
+      - {name: rand_quantile, alpha: ["0.05", "0", "TRUE"]} 
+      - {name: dino, alpha: ["FALSE"]}
+      - {name: normalisr_normvar, alpha: ["FALSE"]}
+      - {name: sanity_map, alpha: ["FALSE"]}
+      - {name: sanity_dists, alpha: ["FALSE"]}
+  
+  
+downsampling:
+  input_data: 
+    dataset: [mcSCRB, smartSeq3_fibroblasts, smartSeq3_fibroblasts_alt, smartSeq3_hek, smartSeq3_siRNA_knockdown]
+    seed: [1, 2, 3, 4, 5]
+  knn_construction: 
+    knn: [10, 50, 100]
+    pca: [5, 10, 50, 100]
+    transformations:  
+      - {name: logp1, alpha: ["FALSE"]}
+      - {name: logp1_hvg, alpha: ["FALSE"]}
+      - {name: logp1_zscore, alpha: ["FALSE"]}
+      - {name: logp1_hvg_zscore, alpha: ["FALSE"]}
+      - {name: logp_cpm, alpha: ["FALSE"]}
+      - {name: logp1_size_normed, alpha: ["FALSE"]}
+      - {name: acosh, alpha: ["TRUE"]} 
+      - {name: logp_alpha, alpha: ["TRUE"]} 
+      - {name: pearson, alpha: ["TRUE"]} 
+      - {name: pearson_clip, alpha: ["TRUE"]} 
+      - {name: pearson_clip_hvg, alpha: ["TRUE"]} 
+      - {name: pearson_clip_zscore, alpha: ["TRUE"]} 
+      - {name: pearson_clip_hvg_zscore, alpha: ["TRUE"]} 
+      - {name: pearson_analytic, alpha: ["TRUE"]} 
+      - {name: sctransform, alpha: ["TRUE"]} 
+      - {name: rand_quantile, alpha: ["TRUE"]} 
+      - {name: dino, alpha: ["FALSE"]}
+      - {name: normalisr_normvar, alpha: ["FALSE"]}
+      - {name: sanity_map, alpha: ["FALSE"]}
+      - {name: sanity_dists, alpha: ["FALSE"]}
+      
+      
+downsampling_best_of:
+  input_data: 
+    dataset: [mcSCRB, smartSeq3_fibroblasts, smartSeq3_fibroblasts_alt, smartSeq3_hek, smartSeq3_siRNA_knockdown]
+    seed: [1, 2, 3, 4, 5]
+  knn_construction: 
+    knn: [10, 50, 100]
+    pca: [5, 10, 50, 100]
+    transformations:  
+      - {name: logp1, alpha: ["FALSE"]}
+      - {name: acosh, alpha: ["TRUE"]} 
+      - {name: pearson_analytic, alpha: ["TRUE"]} 
+      - {name: sctransform, alpha: ["TRUE"]} 
+      - {name: sanity_map, alpha: ["FALSE"]}
+      - {name: dino, alpha: ["FALSE"]}
+  

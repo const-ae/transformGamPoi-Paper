@@ -1,0 +1,180 @@
+---
+title: "R Notebook"
+---
+
+
+
+
+```{r}
+library(tidyverse)
+library(gggroupedscale)
+source("utils.R")
+source("annotation_helper.R")
+```
+
+
+
+```{r}
+dataset_summaries <- read_tsv("../benchmark/output/benchmark_results/dataset_summaries.tsv") %>%
+  dplyr::rename(dataset = name)
+
+plot_data <- read_rds("../benchmark/output/benchmark_results/dataset_plot_data.RDS")
+```
+
+# Table with main dataset features
+
+```{r}
+library(kableExtra)
+```
+
+
+```{r}
+tab_dat <- dataset_summaries %>%
+  dplyr::select(benchmark, dataset, n_cells, n_genes, proportion_zeros, quantile099_count, `median_sequencing-depth`, `overdispersion-global`) %>%
+  mutate(benchmark = factor(benchmark, levels = c("consistency", "simulation", "downsampling_full", "downsampling_reduced"))) %>%
+  left_join(enframe(dataset_labels, name = "dataset", value = "dataset_label")) %>%
+  mutate(dataset_label = ifelse(benchmark == "downsampling_reduced", paste0(dataset_label, " "), dataset_label))
+
+tab_dat
+```
+
+```{r}
+tab_string <- tab_dat %>%
+  arrange(benchmark, dataset) %>%
+  as.data.frame() %>%
+  column_to_rownames("dataset_label") %>%
+  dplyr::transmute(`#Cells` = prettyNum(n_cells, big.mark = ","), `#Genes` = prettyNum(n_genes, big.mark = ","), 
+                   `Perc.\nZeros` = paste0(signif(proportion_zeros * 100, 2),"%"), `99%\nQuant` = quantile099_count,
+                   `UMI/cell` = prettyNum(signif(`median_sequencing-depth`, digits = 3), big.mark = ","),
+                   `Overdisp.` = signif(`overdispersion-global`, 2)) %>%
+  kbl(format = "latex", booktabs = TRUE, escape = TRUE) %>%
+    kable_paper() %>%
+    pack_rows("Consistency", start_row = 1, end_row = 10, latex_gap_space = "0mm") %>%
+    pack_rows("Simulation", start_row = 11, end_row = 15, latex_gap_space = "3mm") %>%
+    pack_rows("Downsampling (original)", start_row = 16, end_row = 20, latex_gap_space = "3mm") %>%
+    pack_rows("Downsampling (reduced)", start_row = 21, end_row = 25, latex_gap_space = "3mm") %>%
+    column_spec(column = 1, latex_column_spec = "l") %>%
+    column_spec(column = 2, latex_column_spec = "r") %>%
+    column_spec(column = 3, latex_column_spec = "r") %>%
+    column_spec(column = 4, latex_column_spec = "r") %>%
+    column_spec(column = 5, latex_column_spec = "r") %>%
+    column_spec(column = 6, latex_column_spec = "r") %>%
+    column_spec(column = 7, latex_column_spec = "r") 
+
+str_split(tab_string, "\n")[[1]] %>%
+    magrittr::extract(., 2:(length(.)-1)) %>%
+    write_lines(file = "../output/datasets_overview_table.tex")
+```
+
+# Make mean-variance plot
+
+```{r}
+mean_var_df <- dataset_summaries %>%
+  transmute(benchmark, dataset, row_means = map(row_means, ~ readr::parse_double(str_split(.x, ",")[[1]])),
+            row_vars = map(row_vars, ~ readr::parse_double(str_split(.x, ",")[[1]]))) %>%
+  unnest(c(row_means, row_vars)) %>%
+  left_join(enframe(dataset_labels, name = "dataset", value = "dataset_label"))
+```
+
+```{r}
+lseq <- function(from, to, length.out){
+  exp(seq(log(from), log(to), length.out = length.out))
+}
+mu_sup <- lseq(1e-4, 1e6, length.out = 101)
+poisson_pred <- cross_df(list(row_means = mu_sup, factor = 10^seq(-4, 6))) %>%
+  mutate(row_vars = row_means * factor)
+
+gampoi_pred <- cross_df(list(row_means = mu_sup, factor = 10^seq(-2, 2, by = 2))) %>%
+  mutate(row_vars = row_means + row_means^2 * factor) 
+```
+
+
+```{r}
+annot_df <- bind_rows(tibble(row_means = 5e3, row_vars = 5e3, label = r"($\mathbb{V}\textrm{ar}=\mu$)",
+                             dataset_label = c("GSE130931", "Dyngen", "HEK (ss3)"), 
+                             benchmark = c("Consistency", "Simulation", "Downsampling"), hjust = 0, vjust = 0.5, angle = 45),
+                      tibble(row_means = sqrt(4e3), row_vars = 4e3, label = r"($\mathbb{V}\textrm{ar}=\mu+1\mu^2$)",
+                             dataset_label = c("GSE130931", "Dyngen", "HEK (ss3)"), 
+                             benchmark = c("Consistency", "Simulation", "Downsampling"), hjust = 0, vjust = 0.4, angle = atan(2) / pi * 180),
+                      tibble(row_means = sqrt(5e3 / 0.01), row_vars = 5e3, label = r"($\mathbb{V}\textrm{ar}=\mu+0.01mu^2$)",
+                             dataset_label = c("GSE130931", "Dyngen", "HEK (ss3)"), 
+                             benchmark = c("Consistency", "Simulation", "Downsampling"), hjust = 0, vjust = 0.4, angle = atan(2) / pi * 180),
+                      tibble(row_means = sqrt(2e3 / 100), row_vars = 2e3, label = r"($\mathbb{V}\textrm{ar}=\mu+100\mu^2$)",
+                             dataset_label = c("GSE130931", "Dyngen", "HEK (ss3)"), 
+                             benchmark = c("Consistency", "Simulation", "Downsampling"), hjust = 0, vjust = 0.4, angle = atan(2) / pi * 180))
+
+mean_var_plots <- mean_var_df %>%
+  mutate(benchmark = factor(benchmark, levels = c("consistency", "simulation", "downsampling_full", "downsampling_reduced"),
+                            labels = c("Consistency", "Simulation", "Downsampling (original)", "Downsampling (reduced)"))) %>%
+  group_by(benchmark) %>%
+  group_map(function(dat, key){
+    cat <- key[[1]][1]
+    ggplot(dat, aes(x = row_means, y = row_vars)) +
+      geom_line(data = poisson_pred, aes(group = factor), color = "lightgray", size = 0.1) +
+      geom_line(data = gampoi_pred %>% filter((factor == 100 & row_vars < 1.5e3) | (factor != 100 & row_vars < 4e3)),
+                aes(group = factor), color = "#DEB554", size = 0.4) +
+      geom_line(data = poisson_pred %>% filter(factor == 1 & row_means < 4e3), aes(group = factor), color = "#C981DE", size = 0.8) +
+      ggrastr::rasterize(geom_point(size = 0.01, alpha = 0.1), dpi = 300) +
+      coord_fixed(expand = FALSE, clip = "off") +
+      shadowtext::geom_shadowtext(data = filter(annot_df, benchmark == cat), aes(label = label, angle = angle, hjust = hjust, vjust = vjust),
+                                  size = font_size_tiny / .pt, color = "black", bg.colour = "white", parse = FALSE) +
+      annotation_logticks(scaled = TRUE, outside = FALSE, size = 0.2,
+                          short = unit(0.05, "cm"), mid = unit(0.1, "cm"), long = unit(0.15, "cm")) +
+      scale_x_log10(breaks = c(0.001, 0.1, 10, 1000, 1e5), limits = c(1e-3, 1e5),
+                    labels = c("$10^{-3}$", "$10^{-1}$", "$10^{}$", "$10^3$", "$10^5$"),
+                    name = r"(Mean ($\mu$))") +
+      scale_y_log10(breaks = c(0.001, 0.1, 10, 1000, 1e5), limits = c(1e-3, 1e6),
+                    labels = c("$10^{-3}$", "$10^{-1}$", "$10^{}$", "$10^3$", "$10^5$"),
+                    name = r"(Variance)") +
+    ggh4x::facet_wrap2(vars(dataset_label), ncol = 5, strip = ggh4x::strip_vanilla(clip = "off")) +
+    theme(strip.background = element_blank(), strip.text = element_text(hjust = 0), panel.spacing.x = unit(4, "mm")) +
+    labs(title = cat)
+  })
+
+cowplot::plot_grid(plotlist = mean_var_plots, nrow = 4, align = "vh", rel_heights = c(2.2, 1.3, 1.3, 1.3), axis = "l")
+save_plot("../output/suppl-mean_var_datasets.pdf", last_plot(), width = 150, height = 180, units = "mm", latex_support = TRUE)
+```
+
+
+# tSNE of each dataset
+
+```{r}
+tnse_dat <- bind_rows(transmute(bind_rows(plot_data$consistency), benchmark = "consistency", dataset = name, cluster, 
+                    tsne = cbind(tsne_log_counts_axis1, tsne_log_counts_axis2)),
+          transmute(bind_rows(plot_data$simulation), benchmark = "simulation", dataset = simulator, cluster, 
+                    tsne = cbind(tsne_log_counts_axis1, tsne_log_counts_axis2)),
+          transmute(bind_rows(plot_data$downsampling), benchmark = "downsampling_full", dataset = name, cluster, 
+                    tsne = cbind(tsne_log_counts_full_axis1, tsne_log_counts_full_axis2)),
+          transmute(bind_rows(plot_data$downsampling), benchmark = "downsampling_reduced", dataset = name, cluster, 
+                    tsne = cbind(tsne_log_counts_reduced_axis1, tsne_log_counts_reduced_axis2))) %>%
+  left_join(enframe(dataset_labels, name = "dataset", value = "dataset_label"))
+```
+
+```{r}
+tsne_plots <- tnse_dat %>%
+  mutate(benchmark = factor(benchmark, levels = c("consistency", "simulation", "downsampling_full", "downsampling_reduced"),
+                            labels = c("Consistency", "Simulation", "Downsampling (original)", "Downsampling (reduced)"))) %>%
+  group_by(benchmark, dataset) %>%
+  mutate(tsne = tsne * 10 / max(tsne), n_points = n()) %>%
+  group_by(benchmark) %>%
+  group_map(function(dat, key){
+    cat <- key[[1]][1]
+    ggplot(dat, aes(x = tsne[,1], y = tsne[,2])) +
+      ggrastr::rasterise(geom_point(aes(color = as.factor(cluster), size = 1/n_points)), dpi = 300, dev = "ragg", scale = 0.25) +
+      geom_hline(yintercept = -15, size = 0.4) + geom_vline(xintercept = -15, size = 0.4) +
+      coord_fixed(xlim = c(-15, 15), ylim = c(-15, 15)) +
+      scale_x_continuous(expand = expansion(0)) +
+      scale_y_continuous(expand = expansion(0)) +
+      scale_size(range = c(1e-6, 2)) +
+      ggh4x::facet_wrap2(vars(dataset_label), ncol = 5, strip = ggh4x::strip_vanilla(clip = "off")) +
+      theme(axis.ticks = element_blank(), axis.text = element_blank(), axis.line = element_blank(),
+            axis.title = element_blank(), panel.spacing.x = unit(3, "mm"),
+            strip.text = element_text(size = font_size_tiny), strip.background = element_blank()) +
+      guides(color = "none", size = "none") +
+      labs(title = cat)
+  })
+
+cowplot::plot_grid(plotlist = tsne_plots, nrow = 4, align = "vh", rel_heights = c(2.2, 1.2, 1.2, 1.2), axis = "l")
+save_plot("../output/suppl-tsne_datasets.pdf", last_plot(), width = 150, height = 180, units = "mm", latex_support = TRUE)
+```
+

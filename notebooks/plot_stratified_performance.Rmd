@@ -1,0 +1,119 @@
+---
+title: "R Notebook"
+---
+
+
+
+
+```{r}
+library(tidyverse)
+library(gggroupedscale)
+source("utils.R")
+source("annotation_helper.R")
+```
+
+```{r}
+plot_data <- read_rds("../benchmark/output/benchmark_results/dataset_plot_data.RDS")
+tsne_dat <- bind_rows(transmute(bind_rows(plot_data$consistency), benchmark = "consistency", dataset = name, cluster, 
+                    tsne = cbind(tsne_log_counts_axis1, tsne_log_counts_axis2)),
+          transmute(bind_rows(plot_data$simulation), benchmark = "simulation", dataset = simulator, cluster, 
+                    tsne = cbind(tsne_log_counts_axis1, tsne_log_counts_axis2)),
+          transmute(bind_rows(plot_data$downsampling), benchmark = "downsampling_full", dataset = name, cluster, 
+                    tsne = cbind(tsne_log_counts_full_axis1, tsne_log_counts_full_axis2)),
+          transmute(bind_rows(plot_data$downsampling), benchmark = "downsampling_reduced", dataset = name, cluster, 
+                    tsne = cbind(tsne_log_counts_reduced_axis1, tsne_log_counts_reduced_axis2))) %>%
+  left_join(enframe(dataset_labels, name = "dataset", value = "dataset_label")) %>%
+  group_by(dataset) %>%
+  mutate(cell_id = seq_len(n()))
+
+res <- read_tsv("../benchmark/output/benchmark_results/simulation_stratefication_results.tsv") %>%
+  mutate(dataset = simulator) %>%
+  group_by(dataset) %>%
+  mutate(cell_id = seq_len(n()))
+```
+
+
+```{r}
+all_tsne_pl <- tidylog::inner_join(tsne_dat, res, by = c("dataset", "cell_id")) %>%
+  ungroup() %>%
+  mutate(tsne1 = tsne[,1], tsne2 = tsne[,2]) %>% dplyr::select(-tsne) %>%
+  filter(dataset == "scDesign2") %>%
+  pivot_longer(`logp1-FALSE`:`sanity_dists-FALSE`, names_to = "transformation", values_to = "value") %>%
+  separate(transformation, into = c("transformation", "alpha"), sep = "-") %>%
+  filter(alpha %in% c("TRUE", "FALSE")) %>%
+  left_join(enframe(trans_labels, name = "transformation", value = "transformation_label")) %>%
+  left_join(trans_families) %>%
+  mutate(transformaton = factor(transformation, levels = trans_families$transformation),
+         transformation_label = fct_reorder(as.factor(transformation_label), as.numeric(transformaton))) %>%
+  ggplot(aes(x = tsne1, y = tsne2)) +
+    ggrastr::rasterise(geom_point(aes(color = `value`), size = 0.01), dpi = 300, scale = 0.6) +
+    facet_wrap(vars(transformation_label), nrow = 3) +
+    coord_fixed() +
+    scale_color_viridis_c(name = "KNN\noverlap") +
+    theme(axis.text = element_blank(), axis.ticks = element_blank(), axis.title = element_blank(),
+          axis.line = element_blank(),
+          strip.background = element_blank(), legend.position = c(0.92, 0.17)) +
+    labs(title = "(C) KNN overlap plotted on the tSNE")
+
+all_tsne_pl
+```
+
+
+```{r}
+annot_df <- tsne_dat %>%
+  filter(dataset == "scDesign2") %>%
+  mutate(tsne1 = tsne[,1], tsne2 = tsne[,2]) %>% dplyr::select(-tsne) %>%
+  group_by(cluster) %>%
+  summarize(size = n(), tsne1 = median(tsne1), tsne2 = median(tsne2))
+
+
+tsne_cluster_col <- tsne_dat %>%
+  filter(dataset == "scDesign2") %>%
+  mutate(tsne1 = tsne[,1], tsne2 = tsne[,2]) %>% dplyr::select(-tsne) %>%
+  ggplot(aes(x = tsne1, y = tsne2)) +
+    ggrastr::rasterize(geom_point(aes(color = as.factor(cluster)), show.legend = FALSE, size = 0.1), dpi = 300, scale = 0.6) +
+    shadowtext::geom_shadowtext(data = annot_df, aes(label = size), size = font_size_small / .pt, color = "black", bg.color = "white") +
+    theme(axis.text = element_blank(), axis.ticks = element_blank(), axis.title = element_blank()) +
+    labs(title = "(B) tSNE of scDesign2 data with cluster sizes annotated")
+tsne_cluster_col
+```
+
+
+```{r}
+cluster_wise_perf_pl <- tidylog::inner_join(tsne_dat, res, by = c("dataset", "cell_id")) %>%
+  ungroup() %>%
+  mutate(tsne1 = tsne[,1], tsne2 = tsne[,2]) %>% dplyr::select(-tsne) %>%
+  filter(dataset == "scDesign2") %>%
+  pivot_longer(`logp1-FALSE`:`sanity_dists-FALSE`, names_to = "transformation", values_to = "value") %>%
+  separate(transformation, into = c("transformation", "alpha"), sep = "-") %>%
+  filter(alpha %in% c("TRUE", "FALSE")) %>%
+  group_by(dataset, cluster, transformation) %>% 
+  summarize(cluster_size = n(),
+            mean = mean(value),
+            median = median(value), .groups = "drop") %>%
+  left_join(trans_families) %>%
+  ggplot(aes(x = cluster_size, y = mean)) +
+    geom_line(aes(color =  family, group = transformation)) +
+    scale_color_manual(values = trans_families_colors, name = "", labels = trans_families_labels) +
+    theme(legend.position = c(0.7, 0.7)) +
+    labs(x = "Cells per cluster", y = "KNN Overlap per cluster",
+         title = "(A) KNN overlap stratified by cluster size for scDesign2")
+
+
+cluster_wise_perf_pl
+```
+
+
+
+```{r}
+plot_assemble(
+  list(plot = cluster_wise_perf_pl, x = 0, y = 0, width = 85, height = 60),
+  list(plot = tsne_cluster_col, x = 90, y = 0, width = 90, height = 55),
+  list(plot = all_tsne_pl, x = 0, y = 60, width = 180, height = 100),
+  width = 180, height = 160, units = "mm",
+  latex_support = TRUE, show_grid_lines = FALSE,
+  filename = "../output/suppl-stratified_performance.pdf"
+)
+```
+
+

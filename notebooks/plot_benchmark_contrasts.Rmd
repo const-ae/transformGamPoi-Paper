@@ -1,0 +1,271 @@
+---
+title: "R Notebook"
+---
+
+
+```{r}
+library(tidyverse)
+library(gggroupedscale)
+source("utils.R")
+source("annotation_helper.R")
+set.seed(1)
+```
+
+Load data
+
+```{r}
+res <- bind_rows(
+  read_tsv("../benchmark/output/benchmark_results/simulation_results.tsv") %>% 
+    transmute(benchmark = "simulation", overlap = mean_knn_overlap, knn, pca_dim, alpha = as.character(alpha), transformation, dataset = simulator, replicate = seed, duration_sec),
+  read_tsv("../benchmark/output/benchmark_results/consistency_results.tsv") %>% 
+    transmute(benchmark = "consistency", overlap = mean_overlap, knn, pca_dim, alpha = as.character(alpha), transformation, dataset, replicate = seed, duration_sec),
+  read_tsv("../benchmark/output/benchmark_results/downsampling_results.tsv") %>% 
+    transmute(benchmark = "downsampling", overlap = overlap, knn, pca_dim, alpha = as.character(alpha), transformation, dataset, replicate = seed, duration_sec = duration_full_sec)
+) %>%
+  mutate(transformation = factor(transformation, levels = trans_families$transformation))
+res
+```
+
+Define which parameters are shown for which dataset
+```{r}
+parameter_choices <- bind_rows(
+  tibble(benchmark = "downsampling", knn = 50, pca_dim = c(10, 10, 10, 10, 50),
+         dataset = c("mcSCRB", "smartSeq3_fibroblasts", "smartSeq3_fibroblasts_alt", "smartSeq3_hek", "smartSeq3_siRNA_knockdown")),
+  tibble(benchmark = "simulation", knn = 50, pca_dim = c(5, 10, 10, 200, 50),
+         dataset = c("dyngen", "linear_walk", "muscat", "random_walk", "scDesign2")),
+  tibble(benchmark = "consistency", knn = 50, pca_dim = 50,
+         dataset = unique(filter(res, benchmark == "consistency")$dataset)),
+)
+```
+
+```{r}
+comp_res <- res %>%
+  filter(knn == 50) %>%
+  mutate(alpha = ifelse(alpha == "0", "FALSE", alpha)) %>%
+  tidylog::inner_join(dplyr::select(parameter_choices, -knn))  %>%
+  mutate(knn_recovery = overlap / knn) %>%
+  group_by(dataset, replicate) %>%
+  mutate(knn_recovery = knn_recovery / mean(knn_recovery)) %>%
+  mutate(transformation = paste0(transformation, "-", alpha)) %>%
+  transmute(transformation = transformation, benchmark, knn_recovery, knn) %>%
+  drop_na() %>%
+  pivot_wider(id_cols = c(knn, benchmark), names_from = transformation, values_from = knn_recovery, values_fill = list(NA_real_)) %>%
+  mutate(benchmark = factor(benchmark, levels = rev(c("consistency", "simulation", "downsampling"))))
+
+
+compare_conditions <- function(dat, a, b, bootstrap_replicates = 1000){
+  if(!a %in% colnames(dat)) stop(a, " is not in the colnames")
+  if(!b %in% colnames(dat)) stop(b, " is not in the colnames")
+  dat %>%
+    dplyr::transmute(benchmark, knn, A = .data[[a]], B = .data[[b]]) %>%
+    rowwise() %>%
+    mutate(bd = list(simpleboot::two.boot(B, A, mean, R = bootstrap_replicates))) %>% 
+    ungroup() %>%
+    mutate(mean_diff = map_dbl(bd, "t0"),
+           mean_ci_low =  map_dbl(bd, ~ quantile(.x$t, probs = 0.025, na.rm = TRUE)),
+           mean_ci_high = map_dbl(bd, ~ quantile(.x$t, probs = 0.975, na.rm = TRUE))) %>%
+    dplyr::select(-c(A, B, bd))
+}
+
+make_comparison_plot <- function(cond_1, cond_2, label_cond_1 = cond_1, label_cond_2 = cond_2, add_dataset_label = FALSE, drop_na_level = FALSE){
+  
+  if(is.null(label_cond_1)){
+    label_cond_1 <- trans_labels[str_split(cond_1, "-")[[1]][1]]
+  }
+  if(is.null(label_cond_2)){
+    label_cond_2 <- trans_labels[str_split(cond_2, "-")[[1]][1]]
+  }
+  
+  tmp <- compare_conditions(comp_res, cond_1, cond_2) %>%
+    mutate(direction = case_when(
+      is.na(mean_ci_low) | is.na(mean_ci_high) ~ "inconclusive",
+      mean_ci_low <= 0 & mean_ci_high >= 0 ~  "inconclusive",
+      mean_ci_low < 0 & mean_ci_high < 0 ~  "left",
+      mean_ci_low > 0 & mean_ci_high > 0 ~  "right",
+    )) %>%
+    drop_na()
+  
+  arrow_pos <- if(drop_na_level){
+    nrow(tmp) + 1
+  }else{
+    4
+  }
+  extreme_val <- max(abs(c(min(tmp$mean_ci_low, na.rm = TRUE), max(tmp$mean_ci_high, na.rm = TRUE))))
+  
+  ggplot(tmp, aes(x = mean_diff, y = benchmark)) +
+      geom_vline(xintercept = 0, size = 0.3, linetype = "dotted", color = "grey") +
+      geom_pointrange(aes(xmin = mean_ci_low, xmax = mean_ci_high, group = as.factor(knn), color = direction), size = 0.5, fatten = 1.2) +
+      annotate("segment", xend = extreme_val, x = extreme_val * 0.1, y = arrow_pos, yend = arrow_pos, arrow = arrow(length = unit(font_size_tiny / 2, "pt"))) +
+      annotate("segment", xend = -extreme_val, x = -extreme_val * 0.1, y = arrow_pos, yend = arrow_pos, arrow = arrow(length = unit(font_size_tiny / 2, "pt"))) +
+      annotate("text", x = -extreme_val * 0.55, y = arrow_pos + 0.2, label = label_cond_1, vjust = 0, size = font_size_tiny / .pt) +
+      annotate("text", x = -extreme_val * 0.55, y = arrow_pos - 0.1, label =" better", vjust = 1, size = font_size_tiny / .pt) +
+      annotate("text", x =  extreme_val * 0.55, y = arrow_pos + 0.2, label = label_cond_2, vjust = 0, size = font_size_tiny / .pt) +
+      annotate("text", x =  extreme_val * 0.55, y = arrow_pos - 0.1, label = " better", vjust = 1, size = font_size_tiny / .pt) +
+      (if(add_dataset_label) geom_text(aes(x = mean_ci_high, label = benchmark), hjust = -0.1, size = font_size_tiny / .pt, color = "#444444")
+       else NULL) +
+      scale_color_manual(values = c(left = "black", right = "black", inconclusive = "#444444"), guide = "none") +
+      scale_x_continuous(limits = c(-extreme_val, extreme_val), breaks = 0) +
+      scale_y_discrete(expand = expansion(add = c(0, 1.5)), drop = drop_na_level) +
+      coord_cartesian(clip = "off") +
+      theme(axis.title = element_blank(),
+            axis.ticks = element_blank(),
+            axis.text = element_blank(),
+            axis.line = element_blank(),
+            plot.margin = unit(c(4,4,8,4), "pt"))
+}
+
+
+alpha_comps <- list(
+  list("acosh-FALSE", "acosh-0.05", "$\\alpha=0$", "$\\alpha=0.05$"),
+  list("acosh-FALSE", "acosh-TRUE", "$\\alpha=0$", "$\\alpha=\\textrm{est.}$"),
+  list("pearson_clip-FALSE", "pearson_clip-0.05", "$\\alpha=0$", "$\\alpha=0.05$"),
+  list("pearson_clip-FALSE", "pearson_clip-TRUE", "$\\alpha=0$","$\\alpha=\\textrm{est.}$")
+)
+
+post_proc_comps <- list(
+  list("logp1-FALSE", "logp1_size_normed-FALSE", NULL, NULL),
+  list("logp1-FALSE", "logp1_hvg-FALSE", NULL, NULL),
+  list("pearson_clip-TRUE", "pearson_clip_hvg-TRUE", NULL, NULL),
+  list("pearson_clip-TRUE", "pearson_clip_zscore-TRUE", NULL, NULL)
+)
+
+cross_proc_comps <- list(
+  list("logp1-FALSE", "sanity_map-FALSE", NULL, NULL),
+  list("logp1-FALSE", "dino-FALSE", NULL, NULL),
+  list("logp1-FALSE", "acosh-TRUE", NULL, NULL),
+  list("logp1-FALSE", "pearson_clip-TRUE", NULL, NULL),
+  
+  list("pearson_clip-TRUE", "sanity_map-FALSE", NULL, NULL),
+  list("pearson_clip-TRUE", "dino-FALSE", NULL, NULL),
+  list("pearson_clip-TRUE", "pearson_analytic-TRUE", NULL, NULL),
+  list("pearson_clip-TRUE", "rand_quantile-TRUE", NULL, NULL)
+)
+
+
+alpha_pl_tmp <- map2(alpha_comps, c(TRUE, FALSE, TRUE, FALSE), ~ make_comparison_plot(.x[[1]], .x[[2]], .x[[3]], .x[[4]], add_dataset_label = .y, drop_na_level = TRUE))
+alpha_theme_adapt <- theme(plot.margin = unit(c(4,4,4,4), "pt"), plot.subtitle = element_text(margin = unit(c(0,0,2,0), "pt")))
+alpha_pl_tmp[[1]] <-  alpha_pl_tmp[[1]] + labs(subtitle = trans_labels["acosh"]) 
+alpha_pl_tmp[[3]] <-  alpha_pl_tmp[[3]] + labs(subtitle = trans_labels["pearson_clip"])
+alpha_comps_pl <- cowplot::plot_grid(plotlist = lapply(alpha_pl_tmp, function(x) x + alpha_theme_adapt), 
+                                     ncol = 2, align = "vh")
+
+post_proc_comps_pl <- cowplot::plot_grid(plotlist = map2(post_proc_comps, c(TRUE, rep(FALSE, 3)), 
+                                                         ~ make_comparison_plot(.x[[1]], .x[[2]], .x[[3]], .x[[4]], add_dataset_label = .y)),
+                                         ncol = 4, align = "vh")
+
+cross_comps_pl <- cowplot::plot_grid(plotlist = map2(cross_proc_comps, c(TRUE, rep(FALSE, 3),TRUE, rep(FALSE, 3)),
+                                                     ~ make_comparison_plot(.x[[1]], .x[[2]], .x[[3]], .x[[4]], add_dataset_label = .y)),
+                                     nrow = 2, ncol = 4, align = "vh")
+```
+
+```{r}
+cross_comps_pl
+post_proc_comps_pl
+alpha_comps_pl
+```
+
+
+
+Recall per sequencing depth
+
+```{r}
+full_knn_overlaps <- bind_cols(read_tsv("../benchmark/output/benchmark_results/simulation_stratefication_results.tsv"),
+                               bind_rows(readRDS("../benchmark/output/benchmark_results/dataset_plot_data.RDS")$simulation))
+stopifnot(all(full_knn_overlaps$simulator...2 == full_knn_overlaps$simulator...46))
+full_knn_overlaps <- full_knn_overlaps %>%
+  dplyr::select(ground_truth_id, simulator = simulator...2, everything(), -simulator...46)
+```
+
+
+```{r}
+loess_fits <- full_knn_overlaps %>%
+  transmute(simulator, seq_depth = col_sums, 
+            logp1 = `logp1-FALSE`, pearson_clip = `pearson_clip-0.05`, sanity_map = `sanity_map-FALSE`) %>%
+  pivot_longer(c(logp1, pearson_clip, sanity_map), names_to = "transformation", values_to = "overlap") %>%
+  mutate(log_seq_depth = log(seq_depth)) %>%
+  group_by(simulator) %>%
+  filter(0.001 < percent_rank(seq_depth) & percent_rank(seq_depth) < 0.999) %>%
+  group_by(simulator, transformation) %>%
+  summarize(loess_fit = broom::augment(loess(overlap ~ log_seq_depth, span = 0.75)), .groups = "drop") %>% 
+  unpack(loess_fit) %>%
+  mutate(seq_depth = exp(log_seq_depth)) %>%
+  left_join(trans_families)
+```
+
+```{r}
+knn_per_depth_pl <- full_knn_overlaps %>%
+  filter(simulator == "linear_walk") %>%
+  transmute(simulator, seq_depth = col_sums, logp1 = `logp1-FALSE`, pearson_clip = `pearson_clip-0.05`, sanity_map = `sanity_map-FALSE`) %>%
+  pivot_longer(c(logp1, pearson_clip, sanity_map), names_to = "transformation", values_to = "overlap") %>%
+  left_join(trans_families) %>%
+  ggplot(aes(x = seq_depth, y = overlap)) +
+    annotation_logticks(sides = "b", short = unit(0.3, "mm"), mid = unit(0.3, "mm"), long = unit(0.5, "mm")) +
+    ggrastr::rasterise(geom_point(alpha = 0.01, size = 0.01), dpi = 300) +
+    geom_line(data = filter(loess_fits, simulator == "linear_walk"), aes(y = .fitted, color = family), size = 0.9) +
+    annotate(geom = shadowtext:::GeomShadowText, x = Inf, y = 25, hjust = 0.9, angle = 0, label = trans_labels["sanity_map"],
+             color = "black", bg.color = "white", size = font_size_tiny / .pt) +
+    annotate(geom = shadowtext:::GeomShadowText, x = Inf, y = 37, hjust = 0.9, angle = 0, label = trans_labels["pearson_clip"],
+           color = "black", bg.color = "white", size = font_size_tiny / .pt) +
+    annotate(geom = shadowtext:::GeomShadowText, x = Inf, y = 49, hjust = 0.9, angle = 0, label = trans_labels["logp1"],
+           color = "black", bg.color = "white", size = font_size_tiny / .pt) +
+    scale_x_log10() +
+    scale_y_continuous(breaks = c(0, 25, 50), expand = expansion(add = 0)) +
+    coord_cartesian(ylim = c(0, 50), clip = "off") +
+    scale_color_manual(values = trans_families_colors, guide = "none") +
+    labs(y = "KNN Overlap", x = "UMIs / cell",
+         title = "(D) More UMIs/cell, better KNN overlap") +
+    theme(plot.title.position = "plot", plot.margin = unit(c(4,4,1,1), "pt"),
+          plot.title = element_text(margin = unit(c(0, 0, 8, 0), "pt")))
+    
+knn_per_depth_pl
+```
+
+
+
+
+```{r}
+full_knn_overlaps %>%
+  filter(simulator != "linear_walk") %>%
+  transmute(simulator, seq_depth = col_sums, 
+            logp1 = `logp1-FALSE`, pearson_clip = `pearson_clip-0.05`, sanity_map = `sanity_map-FALSE`) %>%
+  pivot_longer(c(logp1, pearson_clip, sanity_map), names_to = "transformation", values_to = "overlap") %>%
+  ggplot(aes(x = seq_depth, y = overlap)) +
+    annotation_logticks(sides = "b", size = 0.2, short = unit(0.05, "cm"), mid = unit(0.1, "cm"), long = unit(0.15, "cm")) +
+    ggrastr::rasterise(geom_point(alpha = 0.01, size = 0.1), dpi = 300) +
+    geom_line(data = filter(loess_fits, simulator != "linear_walk"), aes(y = .fitted, color = transformation), size = 0.8) +
+    scale_x_log10() +
+    coord_cartesian(clip = "off") +
+    scale_color_manual(values = c(logp1 = unname(trans_families_colors["delta_method"]), 
+                                  pearson_clip =  unname(trans_families_colors["glm_residual"]), 
+                                  sanity_map =  unname(trans_families_colors["latent_expr"])), 
+                       labels = trans_labels[c("logp1", "pearson_clip", "sanity_map")], 
+                       guide = guide_legend(title = "")) +
+    facet_wrap(vars(simulator), scales = "free", nrow = 2, labeller = labeller(simulator = dataset_labels)) +
+    labs(x = "UMIs / cell") +
+    theme(strip.background = element_blank())
+
+save_plot("../output/suppl-seq_depth_overlap_trend.pdf", last_plot(), width = 150, height = 75, units = "mm", latex_support = TRUE)
+```
+
+```{r fig.height=3.71, fig.width=6.69, dev="ragg_png"}
+plot_assemble(
+  annotate_text("(A) $\\log(y/s+1)$ performs on par with the best alternatives", fontsize = font_size, x = 0, y = 2, vjust = 1, fontface = "bold"),
+  list(plot = cross_comps_pl, x = 0, y = 6, width = 112, height = 35),
+  annotate_text("(B) Non-zero overdispersion improves\nresults for Pearson residuals and acosh", fontsize = font_size, x = 120, y = 2, vjust = 1, fontface = "bold"),
+  list(plot = alpha_comps_pl, x = 120, y = 8, width = 60, height = 30),
+  annotate_text("(C) Post-processing does not consistently improve VST results", fontsize = font_size, x = 0, y = 42, vjust = 1, fontface = "bold"),
+  list(plot = post_proc_comps_pl, x = 0, y = 46, width = 112, height = 17.5),
+  list(plot = knn_per_depth_pl, x = 120, y = 38, width = 60, height = 29),
+  width = 180, height = 67, units = "mm", show_grid_lines = FALSE,
+  filename = "../output/main_contrasts_fig.pdf", latex_support = TRUE
+)
+```
+
+
+
+
+# Session Info
+
+```{r}
+sessionInfo()
+```

@@ -1,0 +1,8 @@
+extra_data/*
+
+
+# History files
+.Rhistory
+.Rapp.history
+# RStudio files
+.Rproj.user/
