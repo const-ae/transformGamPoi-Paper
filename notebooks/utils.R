@@ -34,6 +34,7 @@ my_pdf <- function(filename, width, height, units = c("inches", "in", "cm", "mm"
 my_tikz <- function(filename, width, height, units = c("inches", "in", "cm", "mm", "px"), dpi = 300, scale = 1, stand_alone = TRUE, ...){
   dim <- convert_dims(width, height, units, dpi, scale)
   tikzDevice::tikz(filename, width = dim[1], height = dim[2], standAlone = stand_alone, 
+                   documentDeclaration = c(getOption("tikzDocumentDeclaration"), r"(\renewcommand{\familydefault}{\sfdefault})", r"(\usepackage{helvet})"),  # Use sans serif font Helvetica
                    packages = c(options("tikzLatexPackages")$tikzLatexPackages, "\\usepackage{amssymb}", "\\usepackage{amsmath}", "\\usepackage{bm}"),  ...)
 }
 
