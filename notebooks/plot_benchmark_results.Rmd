@@ -55,41 +55,46 @@ res_main <- res %>%
   tidylog::left_join(trans_families)
 
 make_main_plot_panel <- function(data, add_group_label = FALSE){
-  ggplot(data, aes(x = transformation, y = knn_recovery, color = family)) +
-    geom_hline(yintercept = 1, size = 0.3, linetype = 2) +
-    ggbeeswarm::geom_quasirandom(color = "grey", size = 0.3, alpha = 0.3) +
-    stat_summary(geom = "pointrange", position = position_dodge2(width = 0.3), fun.data = mean_cl_boot, fatten = 1.8) +
-    scale_x_grouped_discrete(grouping = ~ trans_families_labels[deframe(trans_families)[.x]], gap_size = 1.5, 
-                             labels = trans_labels, add_group_label = add_group_label, guide = if(add_group_label) guide_grouped_axis(angle = 90) else guide_axis(angle = 90)) +
-    scale_y_continuous(limits = c(0.2, 1.8), breaks = c(0.5, 1, 1.5)) +
+  ggplot(data, aes(x= knn_recovery, y = transformation, color = family)) +
+    geom_vline(xintercept = 1, size = 0.3, linetype = 2) +
+    ggbeeswarm::geom_quasirandom(color = "grey", size = 0.3, alpha = 0.7, groupOnX = FALSE) +
+    stat_summary(geom = "point", position = position_dodge2(width = 0.3), fun.data = mean_cl_boot, fatten = 1.8) +
+    scale_y_grouped_discrete(grouping = ~ trans_families_labels[deframe(trans_families)[.x]], gap_size = 1.5, limits = rev,
+                             labels = trans_labels, add_group_label = add_group_label, guide = if(add_group_label) guide_grouped_axis() else guide_axis()) +
+    scale_x_continuous(limits = c(0.2, 1.8), breaks = c(0.5, 1, 1.5)) +
     scale_color_manual(values = trans_families_colors, labels = trans_families_labels, guide = "none") +
-    theme_grouped_axis(axis.grouping.line_padding = unit(5, "pt"), axis.grouping.line_height = unit(10, "pt")) +
-    theme(axis.title.x = element_blank(),  plot.title.position = "plot")
+    theme_grouped_axis(axis.grouping.line_padding = unit(5, "pt"), axis.grouping.line_height = unit(10, "pt"), axis.grouping.label.y = element_text(size = font_size_small, angle = 90)) +
+    theme(axis.title.y = element_blank(),  plot.title.position = "plot")
 }
 
 consistency_pl <- res_main %>%
   filter(benchmark == "consistency") %>%
-  make_main_plot_panel(add_group_label = FALSE) +
-  labs(y = "Relative KNN\nOverlap", 
-       title = "(A) Consistency: 10X gene subset A vs. gene subset B") +
+  make_main_plot_panel(add_group_label = TRUE) +
+  labs(x = "Relative $k$-NN Overlap", 
+       title = "(A) Consistency", subtitle = "10X gene subset A vs. gene subset B") +
   NULL
 
 simulation_pl <- res_main %>%
   filter(benchmark == "simulation") %>%
   make_main_plot_panel(add_group_label = FALSE) +
-  labs(y = "Relative KNN\nOverlap", 
-       title = "(B) Simulation: Ground truth vs. simulated counts") +
+  labs(x = "Relative $k$-NN Overlap", 
+       title = "(B) Simulation", subtitle = "Ground truth vs. simulated counts") +
   NULL
 
 
 downsampling_pl <- res_main %>%
   filter(benchmark == "downsampling") %>%
-  make_main_plot_panel(add_group_label = TRUE) +
-  labs(y = "Relative KNN\nOverlap", 
-       title = "(C) Downsampling: Original vs. downsampled Smart-seq3 data") +
+  make_main_plot_panel(add_group_label = FALSE) +
+  labs(x = "Relative $k$-NN Overlap", 
+       title = "(C) Downsampling", subtitle = "Original vs. downsampled Smart-seq3 data") +
   NULL
 
+consistency_pl
+simulation_pl
+downsampling_pl
 ```
+
+
 
 
 Make the same panels but with $k=10$ and $k=100$
@@ -106,59 +111,59 @@ res_alt_knn <- res %>%
 suppl_con_k10 <- res_alt_knn %>%
   filter(knn == 10) %>%
   filter(benchmark == "consistency") %>%
-  make_main_plot_panel(add_group_label = FALSE) +
-  labs(y = "Relative KNN\nOverlap", 
-       title = "(A) Consistency: k = 10") +
+  make_main_plot_panel(add_group_label = TRUE) +
+  labs(x = "Relative $k$-NN\nOverlap", 
+       title = "(A) Consistency: $k = 10$") +
   NULL
 
 suppl_con_k100 <- res_alt_knn %>%
   filter(knn == 100) %>%
   filter(benchmark == "consistency") %>%
-  make_main_plot_panel(add_group_label = FALSE) +
-  labs(y = "Relative KNN\nOverlap", 
-       title = "(B) Consistency: k = 100") +
+  make_main_plot_panel(add_group_label = TRUE) +
+  labs(x = "Relative $k$-NN\nOverlap", 
+       title = "(B) Consistency: $k = 100$") +
   NULL
 
 suppl_sim_k10 <- res_alt_knn %>%
   filter(knn == 10) %>%
   filter(benchmark == "simulation") %>%
   make_main_plot_panel(add_group_label = FALSE) +
-  labs(y = "Relative KNN\nOverlap", 
-       title = "(C) Simulation: k = 10") +
+  labs(x = "Relative $k$-NN\nOverlap", 
+       title = "(C) Simulation: $k = 10$") +
   NULL
 
 suppl_sim_k100 <- res_alt_knn %>%
   filter(knn == 100) %>%
   filter(benchmark == "simulation") %>%
   make_main_plot_panel(add_group_label = FALSE) +
-  labs(y = "Relative KNN\nOverlap", 
-       title = "(D) Simulation: k = 100") +
+  labs(x = "Relative $k$-NN\nOverlap", 
+       title = "(D) Simulation: $k = 100$") +
   NULL
 
 
 suppl_dow_k10 <- res_alt_knn %>%
   filter(knn == 10) %>%
   filter(benchmark == "downsampling") %>%
-  make_main_plot_panel(add_group_label = TRUE) +
-  labs(y = "Relative KNN\nOverlap", 
-       title = "(E) Downsampling: k = 10") +
+  make_main_plot_panel(add_group_label = FALSE) +
+  labs(x = "Relative $k$-NN\nOverlap", 
+       title = "(E) Downsampling: $k = 10$") +
   NULL
 
 suppl_dow_k100 <- res_alt_knn %>%
   filter(knn == 100) %>%
   filter(benchmark == "downsampling") %>%
-  make_main_plot_panel(add_group_label = TRUE) +
-  labs(y = "Relative KNN\nOverlap", 
-       title = "(F) Downsampling: k = 100") +
+  make_main_plot_panel(add_group_label = FALSE) +
+  labs(x = "Relative $k$-NN\nOverlap", 
+       title = "(F) Downsampling: $k = 100$") +
   NULL
 
-plot_assemble(list(plot = suppl_con_k10,    x = 0,  y = 0,    width = 88, height = 50),
-              list(plot = suppl_con_k100,   x = 92, y = 0,    width = 88, height = 50),
-              list(plot = suppl_sim_k10,    x = 0,  y = 50,   width = 88, height = 50),
-              list(plot = suppl_sim_k100,   x = 92, y = 50,   width = 88, height = 50),
-              list(plot = suppl_dow_k10,    x = 0,  y = 100,  width = 88, height = 55),
-              list(plot = suppl_dow_k100,   x = 92, y = 100,  width = 88, height = 55),
-              width = 180, height = 155, units = "mm", show_grid_lines = FALSE,
+plot_assemble(list(plot = suppl_con_k10,    x = 0,  y = 0,    width = 60, height = 75),
+              list(plot = suppl_con_k100,   x = 0, y = 75,    width = 60, height = 75),
+              list(plot = suppl_sim_k10,    x = 60,  y = 0,   width = 60, height = 75),
+              list(plot = suppl_sim_k100,   x = 60, y = 75,   width = 60, height = 75),
+              list(plot = suppl_dow_k10,    x = 120,  y = 0,  width = 60, height = 75),
+              list(plot = suppl_dow_k100,   x = 120, y = 75,  width = 60, height = 75),
+              width = 180, height = 150, units = "mm", show_grid_lines = FALSE,
               filename = "../output/suppl_alt_k_benchmark.pdf", latex_support = TRUE)
 
 ```
@@ -171,39 +176,39 @@ res_full_bench <- res %>%
   tidylog::left_join(trans_families)
 
 make_main_suppl_plot_panels <- function(data, add_group_label = FALSE){
-  ggplot(data, aes(x = transformation, y = overlap, color = family)) +
-    geom_hline(data = . %>% group_by(dataset) %>% summarize(mean = mean(overlap)), aes(yintercept = mean), size = 0.3, linetype = 2) +
-    ggbeeswarm::geom_quasirandom(color = "grey", size = 0.3, alpha = 0.8) +
-    stat_summary(geom = "pointrange", position = position_dodge2(width = 0.3), fun.data = mean_cl_boot, fatten = 1.8) +
-    scale_x_grouped_discrete(grouping = ~ trans_families_labels[deframe(trans_families)[.x]], gap_size = 1.5,
-                             labels = trans_labels, add_group_label = add_group_label, guide = if(add_group_label) guide_grouped_axis(angle = 90) else guide_axis(angle = 90)) +
-    scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, 0.2))) +
+  ggplot(data, aes(x = overlap, y = transformation, color = family)) +
+    geom_vline(data = . %>% group_by(dataset) %>% summarize(mean = mean(overlap)), aes(xintercept = mean), size = 0.3, linetype = 2) +
+    ggbeeswarm::geom_quasirandom(color = "grey", size = 0.3, alpha = 0.8, groupOnX = FALSE) +
+    stat_summary(geom = "point", position = position_dodge2(width = 0.3), fun.data = mean_cl_boot, fatten = 1.8) +
+    scale_y_grouped_discrete(grouping = ~ trans_families_labels[deframe(trans_families)[.x]], gap_size = 1.5, limits = rev,
+                             labels = trans_labels, add_group_label = add_group_label, guide = if(add_group_label) guide_grouped_axis() else guide_axis()) +
+    scale_x_continuous(limits = c(0, NA), expand = expansion(mult = c(0, 0.2))) +
     scale_color_manual(values = trans_families_colors, labels = trans_families_labels, guide = "none") +
-    facet_wrap(vars(dataset), ncol = 3, scales = "free_y", labeller = labeller(dataset = dataset_labels)) +
-    theme_grouped_axis(axis.grouping.line_padding = unit(5, "pt"), axis.grouping.line_height = unit(10, "pt"), axis.grouping.label.x = element_text(size = font_size_small)) +
-    theme(axis.title.x = element_blank(),  plot.title.position = "plot", axis.text.x = element_text(size = font_size_tiny), strip.background = element_blank()) 
+    facet_wrap(vars(dataset), ncol = 5, scales = "free_x", labeller = labeller(dataset = dataset_labels)) +
+    theme_grouped_axis(axis.grouping.line_padding = unit(5, "pt"), axis.grouping.line_height = unit(10, "pt"), axis.grouping.label.y = element_text(size = font_size_small, angle = 90)) +
+    theme(axis.title.y = element_blank(),  plot.title.position = "plot", axis.text.x = element_text(size = font_size_tiny), strip.background = element_blank()) 
 }
 
 con_suppl_pl <- res_full_bench %>%
   filter(benchmark == "consistency") %>%
-  make_main_suppl_plot_panels(add_group_label = FALSE) +
-  labs(title = "(A) Consistency: 10X gene subset A vs. gene subset B")
+  make_main_suppl_plot_panels(add_group_label = TRUE) +
+  labs(title = "(A) Consistency: 10X gene subset A vs. gene subset B", x = "$k$-NN Overlap")
 
 sim_suppl_pl <- res_full_bench %>%
   filter(benchmark == "simulation") %>%
-  make_main_suppl_plot_panels(add_group_label = FALSE) +
-  labs(title = "(B) Simulation: Ground truth vs. simulated counts")
+  make_main_suppl_plot_panels(add_group_label = TRUE) +
+  labs(title = "(B) Simulation: Ground truth vs. simulated counts", x = "$k$-NN Overlap")
 
 dow_suppl_pl <- res_full_bench %>%
   filter(benchmark == "downsampling") %>%
   make_main_suppl_plot_panels(add_group_label = TRUE) +
-  labs(title = "(C) Downsampling: Original vs. downsampled Smart-seq3 data")
+  labs(title = "(C) Downsampling: Original vs. downsampled Smart-seq3 data", x = "$k$-NN Overlap")
 
 plot_assemble(
-  list(plot = con_suppl_pl, x = 0, y = 0, width = 180, height = 90),
-  list(plot = sim_suppl_pl, x = 0, y = 90, width = 180, height = 60),
-  list(plot = dow_suppl_pl, x = 0, y = 150, width = 180, height = 65),
-  width = 180, height = 215, units = "mm", show_grid_lines = FALSE,
+  list(plot = con_suppl_pl, x = 0, y = 0, width = 180, height = 120),
+  list(plot = sim_suppl_pl, x = 0, y = 120, width = 180, height = 65),
+  list(plot = dow_suppl_pl, x = 0, y = 185, width = 180, height = 65),
+  width = 180, height = 250, units = "mm", show_grid_lines = FALSE,
   filename = "../output/suppl-raw_benchmark_results.pdf", latex_support = TRUE
 )
 
@@ -232,30 +237,51 @@ make_pca_plot_panel <- function(data, long_x_scale, breaks = c(0)){
     scale_color_manual(values = trans_families_colors) +
     scale_y_continuous(limits = c(0, NA), breaks = breaks) +
     scale_linetype_manual(values = c(`TRUE` = "dashed", `FALSE`  = "solid")) +
-    labs(y = "KNN Overlap", x = "\\#PCA-dimensions")
+    labs(y = "Rel.~$k$-NN\nOverlap", x = "\\#PCA-dimensions")
 }
 
 pca_pl_random_walk <- pca_dat %>%
   filter(dataset == "random_walk") %>%
   make_pca_plot_panel(long_x_scale = TRUE, breaks = c(0, 0.4, 0.8)) +
-  theme(axis.title.x = element_blank())
-
+  labs(title = "Random Walk") +
+  theme(plot.title = element_text(face = "plain", size = font_size_small, hjust = 0.5, margin = margin(), lineheight = 0.8)) 
 
 pca_pl_scDesign2 <- pca_dat %>%
   filter(dataset == "scDesign2") %>%
-  make_pca_plot_panel(long_x_scale = TRUE, breaks = c(0, 0.1, 0.2))
+  make_pca_plot_panel(long_x_scale = TRUE, breaks = c(0, 0.1, 0.2)) +
+  labs(title = "scDesign2") +
+  theme(plot.title = element_text(face = "plain", size = font_size_small, hjust = 0.5, margin = margin(), lineheight = 0.8)) 
+
 
 pca_pl_siRNA_kd <- pca_dat %>%
   filter(dataset == "smartSeq3_siRNA_knockdown") %>%
   make_pca_plot_panel(long_x_scale = FALSE, breaks = c(0, 0.1)) +
-  theme(axis.title.x = element_blank())
+  labs(title = "siRNA KD") +
+   theme(plot.title = element_text(face = "plain", size = font_size_small, hjust = 0.5, margin = margin(), lineheight = 0.8)) 
 
 
 pca_pl_10X <- pca_dat %>%
   filter(dataset == "GSE179714") %>%
-  make_pca_plot_panel(long_x_scale = FALSE, breaks = c(0, 0.2, 0.4, 0.6))
+  make_pca_plot_panel(long_x_scale = FALSE, breaks = c(0, 0.2, 0.4, 0.6)) +
+  labs(title = "GSE179714") +
+  theme(plot.title = element_text(face = "plain", size = font_size_small, hjust = 0.5, margin = margin(), lineheight = 0.8)) 
 
 ```
+
+
+```{r}
+plot_assemble(list(plot = consistency_pl,     x = 0,  y = 0,    width = 60, height = 75),
+              list(plot = simulation_pl,      x = 60, y = 0,    width = 60, height = 75),
+              list(plot = downsampling_pl,    x = 120,  y = 0,   width = 60, height = 75),
+              annotate_text("(D) $k$-NN overlap depends on \\#PCA-dimensions", x = 2, y = 78, fontsize = font_size, fontface = "bold"),
+              list(plot = pca_pl_random_walk, x = 0,   y = 78,  width = 44, height = 23),
+              list(plot = pca_pl_scDesign2,   x = 45,  y = 78,  width = 44, height = 23),
+              list(plot = pca_pl_siRNA_kd,    x = 90,  y = 78,  width = 44, height = 23),
+              list(plot = pca_pl_10X,         x = 135, y = 78,  width = 44, height = 23),
+              width = 180, height = 101, units = "mm", show_grid_lines = FALSE,
+              filename = "../output/main_benchmark_fig.pdf", latex_support = TRUE)
+```
+
 
 # Duration plots
 
