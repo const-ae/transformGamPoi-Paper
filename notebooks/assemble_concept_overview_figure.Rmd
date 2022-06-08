@@ -57,7 +57,10 @@ size_factor_dep_plots <- size_factor_dep_data %>%
   group_map(function(dat, key){
     cat <- key[[1]][1]
     ggplot(dat, aes(x = pca[,1], y = pca[,2])) +
-      geom_hline(yintercept = -11, size = 0.5) + geom_vline(xintercept = -16, size = 0.5) +
+      # geom_hline(yintercept = -11, size = 0.5) + geom_vline(xintercept = -16, size = 0.5) +
+      annotate("segment", x = -16, xend = -10, y = -11, yend = -11, arrow = arrow(length = unit(0.5, "mm"))) +
+      annotate("segment", x = -16, xend = -16, y = -11, yend = -5, arrow = arrow(length = unit(0.5, "mm"))) +
+      annotate("text", x = -15, y = -10, label = "PCA", size = font_size_small / .pt, vjust = 0, hjust = 0) +
       geom_point(aes(color = size_factor), size = 0.7) +
       # facet_wrap(vars(transformation_labelled), ncol = 4, labeller = labeller(transformation_labelled = label_parsed)) +
       ggh4x::facet_wrap2(vars(transformation_labelled), ncol = 4, strip = ggh4x::strip_vanilla(clip = "off")) +
@@ -161,7 +164,7 @@ mean_var_plots <- mean_var_df %>%
       coord_cartesian(clip = "off") +
       labs(x = "Gene Mean (log-scale)", y = "Variance") +
       theme(strip.text = element_blank(), strip.background = element_blank(), plot.title = element_blank(),
-            ggh4x.axis.ticks.length.minor = rel(0.5), axis.text = element_blank()) 
+            ggh4x.axis.ticks.length.minor = rel(0.5)) 
   })
 
 mean_var_plots
@@ -218,7 +221,12 @@ mouse_lung_pl <- res %>%
         geom_blank(data = tibble(gene_expr = 0)) +
         ggh4x::facet_wrap2(vars(transformation_labelled), ncol = 4, 
                          strip = ggh4x::strip_vanilla(clip = "off"), scales ="free", trim_blank = TRUE) +
-        scale_y_continuous(expand = expansion(mult = c(0.015, NA))) +
+        scale_y_continuous(expand = expansion(mult = c(0.015, NA)),
+                           breaks = function(x){
+                             signif_dig <- 1
+                             ord <- floor(log10(max(x)))
+                             c(0, floor(max(x) / 10^(ord-signif_dig+1)) * 10^(ord-signif_dig+1))
+                           }) +
         scale_x_continuous(breaks = function(x){
            digits <- 1
            ax <- max(abs(max(x)), abs(min(x)))
@@ -231,7 +239,7 @@ mouse_lung_pl <- res %>%
         coord_cartesian(clip = "off") +
         labs(x = "", y = "\\#cells") +
         theme(strip.background = element_blank(), strip.text = element_blank(),
-              axis.text.y = element_blank(), axis.ticks.y = element_blank(),
+              # axis.text.y = element_blank(), axis.ticks.y = element_blank(),
               axis.title.x = element_blank(), plot.title = element_blank())
   })
 
@@ -266,7 +274,7 @@ plot_assemble(
   annotate_text(r"($M \sim \textrm{LogNormal}(\mu, \sigma^2)$)", x = 22.5 + 45 * 3 - 2 + 3.2, y = 8 + 4.5, fontsize = font_size, vjust = 0.5, hjust = 0.5),
   
   # Size factor influence on PCA
-  annotate_text("(A) Residual structure due to sequencing depth of a RNA solution encapsulated in droplets", 
+  annotate_text("(A) Confounding between sequencing depth and PCA embedding of transformed data from droplets encapsulating identical RNA", 
                 x = 1, y = header_height + 2, fontsize = font_size, fontface = "bold", vjust = 1),
   list(plot = size_factor_dep_plots[[1]], x = 45 * 0, y = header_height + title_gap, width = 45, height = sf_panel_height),
   list(plot = size_factor_dep_plots[[2]], x = 45 * 1, y = header_height + title_gap, width = 45, height = sf_panel_height),
@@ -281,7 +289,7 @@ plot_assemble(
   list(plot = mean_var_plots[[3]], x = 45 * 2, y = header_height + title_gap * 2 + sf_panel_height, width = 45, height = mv_panel_height),
   list(plot = mean_var_plots[[4]], x = 45 * 3, y = header_height + title_gap * 2 + sf_panel_height, width = 45, height = mv_panel_height),
   # Bimodal gene stabilization
-  annotate_text(paste0("(C) Distribution of transformed values for one gene (Sftpc) with a bimodal expression pattern in lung epithelium"), 
+  annotate_text(paste0("(C) Distribution of transformed values for a single gene (Sftpc) with a bimodal expression pattern in lung epithelium"), 
                 x = 1, y = header_height + title_gap * 2 + sf_panel_height + mv_panel_height + 2, fontsize = font_size, fontface = "bold", vjust = 1),
   list(plot = mouse_lung_pl[[1]], x = 45 * 0, y = header_height + title_gap * 3 + sf_panel_height + mv_panel_height, width = 45, height = his_panel_height),
   list(plot = mouse_lung_pl[[2]], x = 45 * 1, y = header_height + title_gap * 3 + sf_panel_height + mv_panel_height, width = 45, height = his_panel_height),

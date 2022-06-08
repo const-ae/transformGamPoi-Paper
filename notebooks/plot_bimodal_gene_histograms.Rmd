@@ -167,7 +167,12 @@ pl_list <- res %>%
         geom_blank(data = tibble(gene_expr = 0)) +
         ggh4x::facet_wrap2(vars(transformation_labelled), ncol = 4, 
                          strip = ggh4x::strip_vanilla(clip = "off"), scales ="free", trim_blank = FALSE) +
-        scale_y_continuous(expand = expansion(mult = c(0.015, NA))) +
+        scale_y_continuous(expand = expansion(mult = c(0.015, NA)),
+                            breaks = function(x){
+                             signif_dig <- 1
+                             ord <- floor(log10(max(x)))
+                             c(0, floor(max(x) / 10^(ord-signif_dig+1)) * 10^(ord-signif_dig+1))
+                           }) +
         scale_x_continuous(breaks = function(x){
            digits <- 1
            ax <- max(abs(max(x)), abs(min(x)))
@@ -182,14 +187,14 @@ pl_list <- res %>%
              title = if(cat ==  "raw") "Raw" else trans_families_labels[as.character(cat)]) +
         theme(strip.background = element_blank(),
               strip.text = element_text(size = font_size_small),
-              axis.text.y = element_blank(), axis.ticks.y = element_blank(),
+              # axis.text.y = element_blank(), axis.ticks.y = element_blank(),
               panel.spacing.x = unit(2.5, "mm"),
               axis.title.x = element_blank())
   })
 
 comb_pl <- cowplot::plot_grid(plotlist = pl_list, nrow = 4, ncol = 1, align = "vh", axis = "l", rel_heights = c(1.1, 2, 2, 1.1))
 comb_pl <- cowplot::ggdraw(comb_pl) +
-  cowplot::draw_label(x = 0.38, y = 0.735, label = "Type II pneumocytes", size = font_size_small) +
+  cowplot::draw_label(x = 0.40, y = 0.735, label = "Type II pneumocytes", size = font_size_small) +
   cowplot::draw_label(x = 0.365, y = 0.71, label = "Other cells", size = font_size_small) +
   cowplot::draw_line(x = c(0.4, 0.46), y = c(0.728, 0.68), size = 0.2) +
   cowplot::draw_line(x = c(0.365, 0.38), y = c(0.703, 0.68), size = 0.2)

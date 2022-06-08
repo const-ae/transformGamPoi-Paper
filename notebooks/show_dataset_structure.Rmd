@@ -161,15 +161,18 @@ tsne_plots <- tnse_dat %>%
     cat <- key[[1]][1]
     ggplot(dat, aes(x = tsne[,1], y = tsne[,2])) +
       ggrastr::rasterise(geom_point(aes(color = as.factor(cluster), size = 1/n_points)), dpi = 300, dev = "ragg", scale = 0.25) +
-      geom_hline(yintercept = -15, size = 0.4) + geom_vline(xintercept = -15, size = 0.4) +
-      coord_fixed(xlim = c(-15, 15), ylim = c(-15, 15)) +
+      # geom_hline(yintercept = -15, size = 0.4) + geom_vline(xintercept = -15, size = 0.4) +
+      annotate("segment", x = -15, xend = -9, y = -15, yend = -15, arrow = arrow(length = unit(0.5, "mm"))) +
+      annotate("segment", x = -15, xend = -15, y = -15, yend = -9, arrow = arrow(length = unit(0.5, "mm"))) +
+      annotate("text", x = -14, y = -14, label = "tSNE", size = font_size_tiny / .pt, vjust = 0, hjust = 0) +
+      coord_fixed(xlim = c(-15, 15), ylim = c(-15, 15), clip = "off") +
       scale_x_continuous(expand = expansion(0)) +
       scale_y_continuous(expand = expansion(0)) +
       scale_size(range = c(1e-6, 2)) +
       ggh4x::facet_wrap2(vars(dataset_label), ncol = 5, strip = ggh4x::strip_vanilla(clip = "off")) +
       theme(axis.ticks = element_blank(), axis.text = element_blank(), axis.line = element_blank(),
             axis.title = element_blank(), panel.spacing.x = unit(3, "mm"),
-            strip.text = element_text(size = font_size_tiny), strip.background = element_blank()) +
+            strip.text = element_text(size = font_size_small), strip.background = element_blank()) +
       guides(color = "none", size = "none") +
       labs(title = cat)
   })
