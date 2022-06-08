@@ -44,6 +44,8 @@ print(paste0(sum(res$duration_sec) / (60 * 60 * 24 * 356), " years total compute
 
 # Headline plot
 
+
+
 Make the main benchmark overview panels
 ```{r}
 res_main <- res %>%
@@ -291,24 +293,24 @@ rel_scaling_factor_lin <- median(filter(res, transformation == "logp1", dataset 
 
 perf_plot <- res %>%
   filter(alpha %in% c("TRUE", "FALSE")) %>%
-  filter(dataset == sel_dataset, pca_dim == 10) %>%
+  filter(dataset == sel_dataset, pca_dim == 10, knn == 50) %>%
   tidylog::left_join(trans_families) %>%
   ggplot(aes(x = transformation, y = duration_sec)) +
     geom_hline(yintercept = rel_scaling_factor_lin, linetype = 2, color = "grey", size = 0.3) +
     geom_hline(yintercept = rel_scaling_factor_lin * c(10, 100, 1000, 10000), linetype = 2, color = "grey", size = 0.1) +
-    stat_summary(geom = "pointrange", aes(color = family), position = position_dodge2(width = 0.3), fun.data = mean_sdl, fatten = 1.8) +
+    stat_summary(geom = "point", aes(color = family), position = position_dodge2(width = 0.3), fun.data = mean_sdl, fatten = 1.8) +
     geom_text(data = data.frame(y = 10^seq(0, 4)), aes(y = rel_scaling_factor_lin * y, label = paste0("$", y, "\\times$")),
               x = 23.5, hjust = 1, vjust = -0.3, size = font_size_small / .pt) +
-    scale_x_grouped_discrete(grouping = ~ trans_families_labels[deframe(trans_families)[.x]], gap_size = 1.5, 
+    scale_x_grouped_discrete(grouping = ~ fct_rev(trans_families_labels[deframe(trans_families)[.x]]), gap_size = 1.5, 
                              labels = trans_labels, add_group_label = TRUE, guide =  guide_grouped_axis(angle = 90)) +
     scale_y_log10(breaks = c(0.001, 1, 60, 60 * 60, 24 * 60 * 60, 7 * 24 * 60 * 60), expand = expansion(mult = c(0.1, 0.01)),
         labels = c("1 ms", "1 sec", "1 min", "1 hour", "1 day", "1 week"), name = "",
         sec.axis = sec_axis(trans = ~ .x / rel_scaling_factor_lin, breaks = c(1, 10, 100, 1000, 10000))) +
     coord_cartesian(clip = "off") +
     scale_color_manual(values = trans_families_colors, guide = "none") +
-    theme_grouped_axis(axis.grouping.line_padding = unit(5, "pt"), axis.grouping.line_height = unit(10, "pt")) +
+    theme_grouped_axis(axis.grouping.line_padding = unit(5, "pt"), axis.grouping.line_height = unit(10, "pt"), axis.grouping.label.x = element_text(size = font_size_small)) +
     theme(axis.title.x = element_blank(), axis.text.y.right = element_blank(), axis.ticks.y.right = element_blank(), plot.title.position = "plot") +
-    labs(title = "(E) Duration for transformation + KNN calculation", y = "")
+    labs(title = "(A) Computational expense for transf. and $k$-NN calculation", y = "")
   
 
 perf_plot
@@ -394,34 +396,25 @@ scaling_plot <- res %>%
         labels = c("1ms", "1sec", "1min", "1hour", "1day", "1week"), name = "", limits = c(1, NA), expand = expansion(mult = 0.01, 0.05)) +
     scale_x_log10(breaks = c(300, 1000, 3000, 1e4, 3e4)) +
     scale_color_manual(values = trans_families_colors, guide = "none") +
-    labs(title = "(F) The computation time depends on \\#cells", x = "\\#Cells") +
+    labs(title = "(B) The computation time depends on \\#cells", x = "\\#Cells") +
     theme(plot.title.position = "plot")
 
 scaling_plot
 ```
 
 
-```{r fig.height=3.71, fig.width=6.69, dev="ragg_png"}
-perf_box <-  grid::rectGrob(x = 0, y = 0, width = 87, height = 94, default.units = "mm", gp = grid::gpar(fill = "transparent", col = "lightgrey", lty = 5), hjust = 0, vjust = 1)
 
-plot_assemble(list(plot = consistency_pl,     x = 0,  y = 0,    width = 88, height = 50),
-              list(plot = simulation_pl,      x = 92, y = 0,    width = 88, height = 50),
-              list(plot = downsampling_pl,    x = 0,  y = 50,   width = 88, height = 55),
-              list(plot = perf_plot,          x = 92, y = 50,   width = 88, height = 55),
-              annotate_text("(D) KNN overlap depends on \\#PCA-dimensions", x = 2, y = 109, fontsize = font_size, fontface = "bold"),
-              list(plot = pca_pl_random_walk, x = 0,  y = 111,  width = 44, height = 17.5),
-              list(plot = pca_pl_scDesign2,   x = 0,  y = 126,  width = 44, height = 19),
-              list(plot = pca_pl_siRNA_kd,    x = 45, y = 111,  width = 44, height = 17.5),
-              list(plot = pca_pl_10X,         x = 45, y = 126,  width = 44, height = 19),
-              list(plot = scaling_plot,       x = 92, y = 105,  width = 72, height = 40),
-              annotate_text("Sanity Distance", fontsize = font_size_small, x = 160.5, y = 112.5),
-              annotate_text("Sanity MAP", fontsize = font_size_small, x = 160.5, y = 117),
-              annotate_text("Dino", fontsize = font_size_small, x = 160.5, y = 120),
-              annotate_text("...", fontsize = font_size_small, x = 162, y = 126, angle = 90),
-              annotate_text(r"($\log(x/s+1)\rightarrow\textrm{HVG}$)", fontsize = font_size_small * 0.9, x = 160.5, y = 130),
-              list(plot = perf_box, x = 92, y = 50, width = 0, height = 0),
-              width = 180, height = 145, units = "mm", show_grid_lines = FALSE,
-              filename = "../output/main_benchmark_fig.pdf", latex_support = TRUE)
+
+```{r fig.height=3.71, fig.width=6.69, dev="ragg_png"}
+plot_assemble(list(plot = perf_plot,          x = 0, y = 0,   width = 90, height = 60),
+              list(plot = scaling_plot,       x = 0, y = 60,  width = 81, height = 40),
+              annotate_text("Sanity\nDistance", fontsize = font_size_small, x = 77, y = 69),
+              annotate_text("Sanity MAP", fontsize = font_size_small, x = 77, y = 72),
+              annotate_text("Dino", fontsize = font_size_small, x = 77, y = 75),
+              annotate_text("...", fontsize = font_size_small, x = 80, y = 80, angle = 90),
+              annotate_text("$\\log(x/s+1)$\n\\;$\\rightarrow$HVG", fontsize = font_size_small, x = 77, y = 88),
+              width = 90, height = 100, units = "mm", show_grid_lines = FALSE,
+              filename = "../output/main_duration.pdf", latex_support = TRUE)
 ```
 
 
