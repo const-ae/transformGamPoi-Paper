@@ -86,26 +86,29 @@ make_comparison_plot <- function(cond_1, cond_2, label_cond_1 = cond_1, label_co
     drop_na()
   
   arrow_pos <- if(drop_na_level){
-    nrow(tmp) + 1
+    nrow(tmp) + 1.5
   }else{
-    4
+    4.5
   }
+  left_arrow_color <- trans_families_colors[deframe(trans_families)[str_split(cond_1, "-")[[1]][1]]]
+  right_arrow_color <- trans_families_colors[deframe(trans_families)[str_split(cond_2, "-")[[1]][1]]]
   extreme_val <- max(abs(c(min(tmp$mean_ci_low, na.rm = TRUE), max(tmp$mean_ci_high, na.rm = TRUE))))
   
   ggplot(tmp, aes(x = mean_diff, y = benchmark)) +
-      geom_vline(xintercept = 0, size = 0.3, linetype = "dotted", color = "grey") +
+      # geom_vline(xintercept = 0, size = 0.5, color = "grey", linetype = "dashed") +
+      annotate("segment", x = 0, xend = 0, y = 0, yend = arrow_pos, color = "darkgrey", size = 0.5) +
       geom_pointrange(aes(xmin = mean_ci_low, xmax = mean_ci_high, group = as.factor(knn), color = direction), size = 0.5, fatten = 1.2) +
-      annotate("segment", xend = extreme_val, x = extreme_val * 0.1, y = arrow_pos, yend = arrow_pos, arrow = arrow(length = unit(font_size_tiny / 2, "pt"))) +
-      annotate("segment", xend = -extreme_val, x = -extreme_val * 0.1, y = arrow_pos, yend = arrow_pos, arrow = arrow(length = unit(font_size_tiny / 2, "pt"))) +
-      annotate("text", x = -extreme_val * 0.55, y = arrow_pos + 0.2, label = label_cond_1, vjust = 0, size = font_size_tiny / .pt) +
-      annotate("text", x = -extreme_val * 0.55, y = arrow_pos - 0.1, label =" better", vjust = 1, size = font_size_tiny / .pt) +
-      annotate("text", x =  extreme_val * 0.55, y = arrow_pos + 0.2, label = label_cond_2, vjust = 0, size = font_size_tiny / .pt) +
-      annotate("text", x =  extreme_val * 0.55, y = arrow_pos - 0.1, label = " better", vjust = 1, size = font_size_tiny / .pt) +
-      (if(add_dataset_label) geom_text(aes(x = mean_ci_high, label = benchmark), hjust = -0.1, size = font_size_tiny / .pt, color = "#444444")
+      annotate("segment", xend = extreme_val, x = extreme_val * 0.1, y = arrow_pos, yend = arrow_pos, arrow = arrow(length = unit(font_size_tiny / 2, "pt")), size = 0.8, color = right_arrow_color) +
+      annotate("segment", xend = -extreme_val, x = -extreme_val * 0.1, y = arrow_pos, yend = arrow_pos, arrow = arrow(length = unit(font_size_tiny / 2, "pt")), size = 0.8, color = left_arrow_color) +
+      annotate("text", x = -extreme_val * 0.55, y = arrow_pos + 0.3, label = label_cond_1, vjust = 0, size = font_size_small / .pt) +
+      annotate("text", x = -extreme_val * 0.55, y = arrow_pos - 0.2, label =" better", vjust = 1, size = font_size_small / .pt) +
+      annotate("text", x =  extreme_val * 0.55, y = arrow_pos + 0.3, label = label_cond_2, vjust = 0, size = font_size_small / .pt) +
+      annotate("text", x =  extreme_val * 0.55, y = arrow_pos - 0.2, label = " better", vjust = 1, size = font_size_small / .pt) +
+      (if(add_dataset_label) shadowtext::geom_shadowtext(aes(x = mean_ci_high, label = benchmark), hjust = -0.1, size = font_size_small / .pt, color = "#444444", bg.color = "white")
        else NULL) +
       scale_color_manual(values = c(left = "black", right = "black", inconclusive = "#444444"), guide = "none") +
       scale_x_continuous(limits = c(-extreme_val, extreme_val), breaks = 0) +
-      scale_y_discrete(expand = expansion(add = c(0, 1.5)), drop = drop_na_level) +
+      scale_y_discrete(expand = expansion(add = c(0, 2.5)), drop = drop_na_level) +
       coord_cartesian(clip = "off") +
       theme(axis.title = element_blank(),
             axis.ticks = element_blank(),
@@ -132,31 +135,33 @@ post_proc_comps <- list(
 cross_proc_comps <- list(
   list("logp1-FALSE", "sanity_map-FALSE", NULL, NULL),
   list("logp1-FALSE", "dino-FALSE", NULL, NULL),
-  list("logp1-FALSE", "acosh-TRUE", NULL, NULL),
+  # list("logp1-FALSE", "acosh-TRUE", NULL, NULL),
   list("logp1-FALSE", "pearson_clip-TRUE", NULL, NULL),
   
   list("pearson_clip-TRUE", "sanity_map-FALSE", NULL, NULL),
   list("pearson_clip-TRUE", "dino-FALSE", NULL, NULL),
-  list("pearson_clip-TRUE", "pearson_analytic-TRUE", NULL, NULL),
-  list("pearson_clip-TRUE", "rand_quantile-TRUE", NULL, NULL)
+  list("pearson_clip-TRUE", "pearson_analytic-TRUE", NULL, NULL)
+  # list("pearson_clip-TRUE", "rand_quantile-TRUE", NULL, NULL)
 )
 
 
 alpha_pl_tmp <- map2(alpha_comps, c(TRUE, FALSE, TRUE, FALSE), ~ make_comparison_plot(.x[[1]], .x[[2]], .x[[3]], .x[[4]], add_dataset_label = .y, drop_na_level = TRUE))
 alpha_theme_adapt <- theme(plot.margin = unit(c(4,4,4,4), "pt"), plot.subtitle = element_text(margin = unit(c(0,0,2,0), "pt")))
-alpha_pl_tmp[[1]] <-  alpha_pl_tmp[[1]] + labs(subtitle = trans_labels["acosh"]) 
+alpha_pl_tmp[[1]] <-  alpha_pl_tmp[[1]] + labs(subtitle = trans_labels["acosh"])
 alpha_pl_tmp[[3]] <-  alpha_pl_tmp[[3]] + labs(subtitle = trans_labels["pearson_clip"])
-alpha_comps_pl <- cowplot::plot_grid(plotlist = lapply(alpha_pl_tmp, function(x) x + alpha_theme_adapt), 
+alpha_comps_pl <- cowplot::plot_grid(plotlist = lapply(alpha_pl_tmp, function(x) x + alpha_theme_adapt),
                                      ncol = 2, align = "vh")
 
-post_proc_comps_pl <- cowplot::plot_grid(plotlist = map2(post_proc_comps, c(TRUE, rep(FALSE, 3)), 
+post_proc_comps_pl <- cowplot::plot_grid(plotlist = map2(post_proc_comps, c(TRUE, FALSE, TRUE, FALSE),
                                                          ~ make_comparison_plot(.x[[1]], .x[[2]], .x[[3]], .x[[4]], add_dataset_label = .y)),
-                                         ncol = 4, align = "vh")
+                                         ncol = 2, align = "vh")
 
-cross_comps_pl <- cowplot::plot_grid(plotlist = map2(cross_proc_comps, c(TRUE, rep(FALSE, 3),TRUE, rep(FALSE, 3)),
+cross_comps_pl <- cowplot::plot_grid(plotlist = map2(cross_proc_comps, c(TRUE, rep(FALSE, 2),TRUE, rep(FALSE, 2)),
                                                      ~ make_comparison_plot(.x[[1]], .x[[2]], .x[[3]], .x[[4]], add_dataset_label = .y)),
-                                     nrow = 2, ncol = 4, align = "vh")
+                                     nrow = 2, ncol = 3, align = "vh")
+
 ```
+
 
 ```{r}
 cross_comps_pl
@@ -213,7 +218,7 @@ knn_per_depth_pl <- full_knn_overlaps %>%
     coord_cartesian(ylim = c(0, 50), clip = "off") +
     scale_color_manual(values = trans_families_colors, guide = "none") +
     labs(y = "KNN Overlap", x = "UMIs / cell",
-         title = "(D) More UMIs/cell, better KNN overlap") +
+         title = "(D) More UMIs/cell, better KNN overlap", subtitle = "Linear Walk") +
     theme(plot.title.position = "plot", plot.margin = unit(c(4,4,1,1), "pt"),
           plot.title = element_text(margin = unit(c(0, 0, 8, 0), "pt")))
     
@@ -247,16 +252,26 @@ full_knn_overlaps %>%
 save_plot("../output/suppl-seq_depth_overlap_trend.pdf", last_plot(), width = 150, height = 75, units = "mm", latex_support = TRUE)
 ```
 
+
+```{r}
+explainer <- r"(\begin{tabular}{c}Mean and 95\% confidence\\interval of the difference in\\relative $k$-NN overlap for\\the consistency benchmark\\between Dino and Pearson\end{tabular})"
+# explainer <- r"(Test\\line2)"
+```
+
+
 ```{r fig.height=3.71, fig.width=6.69, dev="ragg_png"}
 plot_assemble(
   annotate_text("(A) $\\log(y/s+1)$ performs on par with the best alternatives", fontsize = font_size, x = 0, y = 2, vjust = 1, fontface = "bold"),
-  list(plot = cross_comps_pl, x = 0, y = 6, width = 112, height = 35),
-  annotate_text("(B) Non-zero overdispersion improves\nresults for Pearson residuals and acosh", fontsize = font_size, x = 120, y = 2, vjust = 1, fontface = "bold"),
-  list(plot = alpha_comps_pl, x = 120, y = 8, width = 60, height = 30),
-  annotate_text("(C) Post-processing does not consistently improve VST results", fontsize = font_size, x = 0, y = 42, vjust = 1, fontface = "bold"),
-  list(plot = post_proc_comps_pl, x = 0, y = 46, width = 112, height = 17.5),
-  list(plot = knn_per_depth_pl, x = 120, y = 38, width = 60, height = 29),
-  width = 180, height = 67, units = "mm", show_grid_lines = FALSE,
+  list(plot = cross_comps_pl, x = 0, y = 6, width = 106, height = 45),
+  annotate_text("(B) Non-zero overdispersion improves results", fontsize = font_size, x = 108, y = 2, vjust = 1, fontface = "bold"),
+  list(plot = alpha_comps_pl, x = 108, y = 6, width = 72, height = 45),
+  annotate_text("(C) Post-processing does not consistently improve results", fontsize = font_size, x = 0, y = 52, vjust = 1, fontface = "bold"),
+  list(plot = post_proc_comps_pl, x = 0, y = 55, width = 72, height = 45),
+  list(plot = knn_per_depth_pl, x = 108, y = 50.5, width = 72, height = 50),
+  annotate_text(explainer, x = 78, y = 54.7, fontsize = font_size_small, vjust = 1, hjust = 0),
+  list(plot = grid::rectGrob(x = 0, y = 0, width = 26.8, height = 14, default.units = "mm", gp = grid::gpar(fill = "transparent", col = "#333333", lty = 1, lwd = 0.9), hjust = 0, vjust = 1), x = 78.5, y = 48.7, width = 0, height = 0),
+  list(plot = grid::linesGrob(x = c(1,0), y = c(0,1), default.units = "npc", gp = grid::gpar(col = "#333333", lty = 1, lwd = 0.9)), x = 64.5, y = 39, width = 13.4, height = 9),
+  width = 180, height = 102, units = "mm", show_grid_lines = FALSE,
   filename = "../output/main_contrasts_fig.pdf", latex_support = TRUE
 )
 ```
