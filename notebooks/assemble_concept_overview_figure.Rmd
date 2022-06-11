@@ -281,7 +281,7 @@ plot_assemble(
   list(plot = size_factor_dep_plots[[3]], x = 45 * 2, y = header_height + title_gap, width = 45, height = sf_panel_height),
   list(plot = size_factor_dep_plots[[4]], x = 45 * 3, y = header_height + title_gap, width = 45, height = sf_panel_height),
   # Mean Variance relation
-  annotate_text(paste0("(B) Mean-variance relation of transformated values for ", 
+  annotate_text(paste0("(B) Mean-variance relation of values for ", 
                        prettyNum(n_genes, big.mark = ","), " genes of the GSE130931 dataset"),
                 x = 1, y = header_height + title_gap + sf_panel_height + 2, fontsize = font_size, fontface = "bold", vjust = 1),
   list(plot = mean_var_plots[[1]], x = 45 * 0, y = header_height + title_gap * 2 + sf_panel_height, width = 45, height = mv_panel_height),
