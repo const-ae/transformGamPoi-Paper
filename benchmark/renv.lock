@@ -587,6 +587,22 @@
         "rhdf5filters"
       ]
     },
+    "IMA": {
+      "Package": "IMA",
+      "Version": "0.0.0.9000",
+      "Source": "GitHub",
+      "RemoteType": "github",
+      "RemoteHost": "api.github.com",
+      "RemoteRepo": "integer_matrix_approximation",
+      "RemoteUsername": "shchurch",
+      "RemoteRef": "HEAD",
+      "RemoteSha": "189c65b29f7549ef0ab3f2ee06cea4df2c7b7d71",
+      "RemoteSubdir": "IMA-R",
+      "Hash": "3e65bce15785de274164da1048b8ca3a",
+      "Requirements": [
+        "Matrix"
+      ]
+    },
     "IRanges": {
       "Package": "IRanges",
       "Version": "2.28.0",
@@ -653,6 +669,25 @@
       "Hash": "506b92cb263d9e014a391b41939badcf",
       "Requirements": [
         "matrixStats"
+      ]
+    },
+    "NewWave": {
+      "Package": "NewWave",
+      "Version": "1.4.0",
+      "Source": "Bioconductor",
+      "git_url": "https://git.bioconductor.org/packages/NewWave",
+      "git_branch": "RELEASE_3_14",
+      "git_last_commit": "b524b24",
+      "git_last_commit_date": "2021-10-26",
+      "Hash": "984ab166963e5c1db77f1b492eee77f2",
+      "Requirements": [
+        "BiocSingular",
+        "DelayedArray",
+        "Matrix",
+        "SharedObject",
+        "SingleCellExperiment",
+        "SummarizedExperiment",
+        "irlba"
       ]
     },
     "ProtGenerics": {
@@ -1013,6 +1048,21 @@
         "rgeos",
         "rlang",
         "sp"
+      ]
+    },
+    "SharedObject": {
+      "Package": "SharedObject",
+      "Version": "1.8.0",
+      "Source": "Bioconductor",
+      "git_url": "https://git.bioconductor.org/packages/SharedObject",
+      "git_branch": "RELEASE_3_14",
+      "git_last_commit": "98f4a95",
+      "git_last_commit_date": "2021-10-26",
+      "Hash": "4c8b0bb2b92befaac6540460e308287b",
+      "Requirements": [
+        "BH",
+        "BiocGenerics",
+        "Rcpp"
       ]
     },
     "SingleCellExperiment": {
@@ -1453,6 +1503,33 @@
       "Repository": "CRAN",
       "Hash": "0f22be39ec1d141fd03683c06f3a6e67",
       "Requirements": []
+    },
+    "countland": {
+      "Package": "countland",
+      "Version": "0.0.0.9000",
+      "Source": "GitHub",
+      "Remotes": "shchurch/integer_matrix_approximation/IMA-R",
+      "RemoteType": "github",
+      "RemoteHost": "api.github.com",
+      "RemoteRepo": "countland",
+      "RemoteUsername": "shchurch",
+      "RemoteRef": "HEAD",
+      "RemoteSha": "edcc23eb248fd6a1826e5d52d079918f741fae61",
+      "RemoteSubdir": "countland-R",
+      "Hash": "90420006a9e338adbdf3edeb4b559f0b",
+      "Requirements": [
+        "IMA",
+        "Matrix",
+        "RSpectra",
+        "Seurat",
+        "ggplot2",
+        "igraph",
+        "matrixTests",
+        "rdist",
+        "rlang",
+        "tidyverse",
+        "viridis"
+      ]
     },
     "cowplot": {
       "Package": "cowplot",
@@ -2070,6 +2147,16 @@
         "numDeriv"
       ]
     },
+    "glmpca": {
+      "Package": "glmpca",
+      "Version": "0.2.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "ec62f514be9ff6a313568a424bfc66a4",
+      "Requirements": [
+        "MASS"
+      ]
+    },
     "globals": {
       "Package": "globals",
       "Version": "0.14.0",
@@ -2577,6 +2664,16 @@
       "Hash": "36ad89a805c436c5316c22490079da67",
       "Requirements": []
     },
+    "matrixTests": {
+      "Package": "matrixTests",
+      "Version": "0.1.9.1",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "33e9ccbfc044473cc13dad5a35b4f8bb",
+      "Requirements": [
+        "matrixStats"
+      ]
+    },
     "memoise": {
       "Package": "memoise",
       "Version": "2.0.0",
@@ -2987,6 +3084,17 @@
       "Repository": "CRAN",
       "Hash": "58c20fa8661094f6b577f7cca8b61a7b",
       "Requirements": []
+    },
+    "rdist": {
+      "Package": "rdist",
+      "Version": "0.0.5",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "8692a8277fe5bfa100eabe3b03923ca5",
+      "Requirements": [
+        "Rcpp",
+        "RcppArmadillo"
+      ]
     },
     "readr": {
       "Package": "readr",
@@ -3584,10 +3692,10 @@
     },
     "spatstat.geom": {
       "Package": "spatstat.geom",
-      "Version": "2.3-0",
+      "Version": "2.4-0",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "2d3b807f27c260acb715aa4f94f02428",
+      "Hash": "33f4612dc27fa9228cac4713bb2edfd7",
       "Requirements": [
         "deldir",
         "polyclip",

@@ -42,6 +42,20 @@ knn_for_dist <- function(x, k){
 make_knn_graph <- function(transformation, dat, pca_dim, k_nearest_neighbors){
   if(transformation ==  "sanity_dists"){
     knn_for_dist(dat, k = k_nearest_neighbors)
+  }else if(transformation == "glmpca"){
+    pca_dim <- min(pca_dim, nrow(dat), ncol(dat))
+    pca_res <- glmpca::glmpca(Y = dat, L = pca_dim, fam = if(isFALSE(attr(dat, "alpha"))) "poi" else "nb",
+                              sz = attr(dat, "size_factor"), nb_theta = 1/attr(dat, "alpha"),
+                              # ctl = list(verbose = TRUE, maxIter = 2, minIter = 1)
+    )
+    red_dat <- as.matrix(pca_res$factors)
+    BiocNeighbors::findAnnoy(red_dat, k = k_nearest_neighbors, warn.ties = FALSE)$index
+  }else if(transformation == "newwave"){
+    pca_dim <- min(pca_dim, nrow(dat)-1, ncol(dat)-1)
+    se <- SummarizedExperiment::SummarizedExperiment(assay = list(counts = dat))
+    pca_res <- NewWave::newWave(Y = se, K = pca_dim, n_gene_disp = 100, children = 1)
+    red_dat <- SingleCellExperiment::reducedDim(pca_res, "newWave")
+    BiocNeighbors::findAnnoy(red_dat, k = k_nearest_neighbors, warn.ties = FALSE)$index
   }else{
     if(pca_dim >= nrow(dat) || pca_dim >= ncol(dat)){ 
       red_dat <- t(dat)
@@ -293,6 +307,16 @@ sanity_dists_fnc <- function(UMI, sf, alpha){
 }
 
 
+glmpca_fnc <- function(UMI, sf, alpha){
+  attr(UMI, "alpha") <- alpha
+  attr(UMI, "size_factor") <- sf
+  UMI
+}
+
+newwave_fnc <- function(UMI, sf, alpha){
+  UMI
+}
+
 
 
 
@@ -300,5 +324,6 @@ all_transformations <- list(logp1 = logp1_fnc, logp_cpm = logp_cpm_fnc, acosh = 
                             logp1_hvg = logp1_hvg_fnc, logp1_zscore = logp1_zscore_fnc, logp1_hvg_zscore = logp1_hvg_zscore_fnc, logp1_size_normed = logp1_size_normed_fnc,
                             pearson = pearson_fnc, pearson_clip = pearson_clip_fnc, pearson_analytic = pearson_analytic_fnc, sctransform = sctransform_fnc, rand_quantile = rand_quantile_fnc,
                             pearson_clip_hvg = pearson_clip_hvg_fnc, pearson_clip_zscore = pearson_clip_zscore_fnc, pearson_clip_hvg_zscore = pearson_clip_hvg_zscore_fnc,
-                            dino = dino_fnc, normalisr_normvar = normalisr_normvar_fnc, sanity_map = sanity_map_fnc, sanity_dists = sanity_dists_fnc)
+                            dino = dino_fnc, normalisr_normvar = normalisr_normvar_fnc, sanity_map = sanity_map_fnc, sanity_dists = sanity_dists_fnc,
+                            glmpca = glmpca_fnc, newwave = newwave_fnc)
 

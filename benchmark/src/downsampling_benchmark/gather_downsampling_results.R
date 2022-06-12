@@ -11,13 +11,15 @@ print(pa)
 
 res <- lapply(pa$downsampling_results, function(res_id){
   res <- read_tsv(file.path(pa$working_dir, "results", res_id), show_col_types = FALSE)
-  duration_full <- vapply(res$transformation_full_data_ids, function(id){
-    sum(read_tsv(file.path(pa$working_dir, "duration", id), show_col_types = FALSE)$seconds)
-  }, numeric(1L))
-  duration_reduced <- vapply(res$transformation_reduced_data_ids, function(id){
-    sum(read_tsv(file.path(pa$working_dir, "duration", id), show_col_types = FALSE)$seconds)
-  }, numeric(1L))
-  bind_cols(res, list(duration_full_sec = duration_full, duration_reduced_sec = duration_reduced))
+  duration_full <- map_df(res$transformation_full_data_ids, function(id){
+    durf <- read_tsv(file.path(pa$working_dir, "duration", id), show_col_types = FALSE)
+    tibble(full_cputime_sec = sum(deframe(durf)[c('user.self', "sys.self", "user.child", "sys.child")]), full_elapsed_sec = deframe(durf)['elapsed'])
+  })
+  duration_reduced <- map_df(res$transformation_reduced_data_ids, function(id){
+    durr <- read_tsv(file.path(pa$working_dir, "duration", id), show_col_types = FALSE)
+    tibble(reduced_cputime_sec = sum(deframe(durr)[c('user.self', "sys.self", "user.child", "sys.child")]), reduced_elapsed_sec = deframe(durr)['elapsed'])
+  })
+  bind_cols(res, duration_full, duration_reduced)
 }) %>%
   bind_rows()
 

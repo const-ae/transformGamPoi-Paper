@@ -13,6 +13,7 @@ stopifnot(length(pa$dataset_names) == length(pa$dataset_ids))
 
 
 make_summary <- function(UMI, id, name, benchmark){
+  UMI <- UMI[MatrixGenerics::rowSums2(UMI) > 0, MatrixGenerics::colSums2(UMI) > 0]
   glm_fit_global <- glmGamPoi::glm_gp(UMI, overdispersion = "global", overdispersion_shrinkage = FALSE, on_disk = ncol(UMI) >= 20000, verbose = TRUE)
   
   quantiles <- quantile(UMI, c(0.25, 0.5, 0.75, 0.9, 0.99), names = FALSE)
@@ -24,7 +25,7 @@ make_summary <- function(UMI, id, name, benchmark){
   row_vars <- MatrixGenerics::rowVars(UMI_sf_filtered)
   
   tibble(id = id, name = name, benchmark = benchmark,
-         n_cells = sum(MatrixGenerics::colSums2(UMI) > 0), n_genes = sum(MatrixGenerics::rowSums2(UMI) > 0),
+         n_cells = nrow(UMI), n_genes = ncol(UMI),
          proportion_zeros = sum(UMI == 0) / (n_cells * n_genes),
          quantile025_count = quantiles[1], quantile050_count = quantiles[2], quantile075_count = quantiles[3],
          quantile090_count = quantiles[4], quantile099_count = quantiles[5],

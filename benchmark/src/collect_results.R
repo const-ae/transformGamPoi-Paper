@@ -85,7 +85,7 @@ if(job_status(dataset_summary) == "done"){
 }
 
 #### Overlap per cell #####
-simulation_strat_jobs <- readRDS(file.path("output/job_storage/simulation_for_stratefication_jobs.RDS"))
+simulation_strat_jobs <- readRDS(file.path("output/job_storage/simulation_for_stratification_jobs.RDS"))
 if(all(sapply(simulation_strat_jobs, job_status) == "done")){
   message("save simulation_strat_jobs")
   bind_rows(map_df(simulation_strat_jobs, function(x){
@@ -95,4 +95,28 @@ if(all(sapply(simulation_strat_jobs, job_status) == "done")){
 }else{
   message("Job stats for simulation_strat_jobs:")
   print(table(sapply(simulation_strat_jobs, job_status)))
+}
+
+consistency_strat_jobs <- readRDS(file.path("output/job_storage/consistency_for_stratification_jobs.RDS"))
+if(all(sapply(consistency_strat_jobs, job_status) == "done")){
+  message("save consistency_strat_jobs")
+  bind_rows(map_df(consistency_strat_jobs, function(x){
+    read_tsv(file.path(.OUTPUT_FOLDER, "results", x$result_id), show_col_types = FALSE)
+  })) %>%
+    write_tsv("output/benchmark_results/consistency_stratefication_results.tsv")
+}else{
+  message("Job stats for consistency_strat_jobs:")
+  print(table(sapply(consistency_strat_jobs, job_status)))
+}
+
+downsampling_strat_jobs <- readRDS(file.path("output/job_storage/downsampling_for_stratification_jobs.RDS"))
+if(all(sapply(downsampling_strat_jobs, job_status) == "done")){
+  message("save downsampling_strat_jobs")
+  bind_rows(map_df(downsampling_strat_jobs, function(x){
+    read_tsv(file.path(.OUTPUT_FOLDER, "results", x$result_id), show_col_types = FALSE)
+  })) %>%
+    write_tsv("output/benchmark_results/downsampling_stratefication_results.tsv")
+}else{
+  message("Job stats for downsampling_strat_jobs:")
+  print(table(sapply(downsampling_strat_jobs, job_status)))
 }

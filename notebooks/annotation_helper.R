@@ -1,7 +1,8 @@
 
 trans_families <- list(delta_method = c("logp1", "acosh", "logp_alpha", "logp_cpm", "logp1_size_normed", "logp1_hvg", "logp1_zscore",  "logp1_hvg_zscore"),
                        glm_residual = c("pearson_clip", "sctransform", "pearson_analytic", "rand_quantile", "pearson",  "pearson_clip_hvg", "pearson_clip_zscore", "pearson_clip_hvg_zscore"),
-                       latent_expr = c("sanity_map", "sanity_dists", "dino", "normalisr_normvar")) %>%
+                       latent_expr = c("sanity_map", "sanity_dists", "dino", "normalisr_normvar"),
+                       count_model = c("glmpca", "newwave")) %>%
   enframe() %>%
   unnest(value) %>%
   transmute(transformation = value, family = name)
@@ -22,12 +23,14 @@ trans_labels <- c("acosh" = r"($\textrm{acosh}(2\alpha y/s+1)$)", "logp_alpha" =
                   "rand_quantile" = "Random Quantile", "sctransform" = "sctransform",
                   "pearson_clip_hvg" = r"(Pearson$\rightarrow$HVG)", "pearson_clip_hvg_zscore" = r"(Pearson$\rightarrow$HVG$\rightarrow$Z)", 
                   "pearson_clip_zscore"= r"(Pearson$\rightarrow$Z)",
-                  "sanity_map"="Sanity MAP", "sanity_dists" = "Sanity Distance", "dino" = "Dino", "normalisr_normvar" = "Normalisr")
+                  "sanity_map"="Sanity MAP", "sanity_dists" = "Sanity Distance", "dino" = "Dino", "normalisr_normvar" = "Normalisr",
+                  "glmpca" = "GLM PCA", "newwave" = "NewWave")
 
 trans_families$transformation <- factor(trans_families$transformation, levels = trans_families$transformation)
 
-trans_families_labels <- factor(c(delta_method = "Delta Method", glm_residual = "GLM Residuals", latent_expr = "Latent Expr."), levels = c("Latent Expr.", "GLM Residuals", "Delta Method"))
-trans_families_colors <- c(delta_method = "#66C2A5", glm_residual = "#FC8D62", latent_expr = "#8DA0CB")
+trans_families_labels <- factor(c(delta_method = "Delta Method", glm_residual = "GLM Residuals", latent_expr = "Lat. Expr.", count_model = "Count"), levels = c("Count", "Lat. Expr.", "GLM Residuals", "Delta Method"))
+trans_families_labels_long <- factor(c(delta_method = "Delta Method", glm_residual = "GLM Residuals", latent_expr = "Latent Expression", count_model = "Count Model"), levels = c("Count Model", "Latent Expression", "GLM Residuals", "Delta Method"))
+trans_families_colors <- c(delta_method = "#66C2A5", glm_residual = "#FC8D62", latent_expr = "#8DA0CB", count_model = "#e78ac3")
 
 dataset_labels <- c(dyngen = "Dyngen", linear_walk = "Linear Walk", muscat = "muscat", random_walk = "Random Walk", scDesign2 = "scDesign2",
                     smartSeq3_fibroblasts = "Fibroblasts (ss3)", smartSeq3_fibroblasts_alt = "Fibroblasts 2 (ss3)", 

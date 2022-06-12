@@ -26,10 +26,12 @@ simulation:
       - {name: normalisr_normvar, alpha: ["FALSE"]}
       - {name: sanity_map, alpha: ["FALSE"]}
       - {name: sanity_dists, alpha: ["FALSE"]}
+      - {name: glmpca, alpha: ["FALSE", "0.05"]}
+      - {name: newwave, alpha: ["TRUE"]}
       
 simulation_for_stratification:
   input_data: 
-    simulator: [muscat, dyngen, linear_walk, random_walk, scDesign2]
+    simulator: [scDesign2]
     seed: [1]
   knn_construction: 
     knn: [50]
@@ -55,6 +57,8 @@ simulation_for_stratification:
       - {name: normalisr_normvar, alpha: ["FALSE"]}
       - {name: sanity_map, alpha: ["FALSE"]}
       - {name: sanity_dists, alpha: ["FALSE"]}
+      - {name: glmpca, alpha: ["FALSE", "0.05"]}
+      - {name: newwave, alpha: ["TRUE"]}
   
   
 consistency:
@@ -85,6 +89,39 @@ consistency:
       - {name: normalisr_normvar, alpha: ["FALSE"]}
       - {name: sanity_map, alpha: ["FALSE"]}
       - {name: sanity_dists, alpha: ["FALSE"]}
+      - {name: glmpca, alpha: ["FALSE", "0.05"]}
+      - {name: newwave, alpha: ["TRUE"]}
+  
+consistency_for_stratification:
+  input_data: 
+    dataset: [GSE163505]
+    seed: [1]
+  knn_construction: 
+    knn: [50]
+    pca: [50]
+    transformations:  
+      - {name: logp1, alpha: ["FALSE"]}
+      - {name: logp1_hvg, alpha: ["FALSE"]}
+      - {name: logp1_zscore, alpha: ["FALSE"]}
+      - {name: logp1_hvg_zscore, alpha: ["FALSE"]}
+      - {name: logp_cpm, alpha: ["FALSE"]}
+      - {name: logp1_size_normed, alpha: ["FALSE"]}
+      - {name: acosh, alpha: ["0.05", "0", "TRUE"]} 
+      - {name: logp_alpha, alpha: ["0.05", "0", "TRUE"]} 
+      - {name: pearson, alpha: ["0.05", "0", "TRUE"]} 
+      - {name: pearson_clip, alpha: ["0.05", "0", "TRUE"]} 
+      - {name: pearson_clip_hvg, alpha: ["0.05", "0", "TRUE"]} 
+      - {name: pearson_clip_zscore, alpha: ["0.05", "0", "TRUE"]} 
+      - {name: pearson_clip_hvg_zscore, alpha: ["0.05", "0", "TRUE"]} 
+      - {name: pearson_analytic, alpha: ["0.05", "0", "TRUE"]} 
+      - {name: sctransform, alpha: ["0.05", "0", "TRUE"]} 
+      - {name: rand_quantile, alpha: ["0.05", "0", "TRUE"]} 
+      - {name: dino, alpha: ["FALSE"]}
+      - {name: normalisr_normvar, alpha: ["FALSE"]}
+      - {name: sanity_map, alpha: ["FALSE"]}
+      - {name: sanity_dists, alpha: ["FALSE"]}
+      - {name: glmpca, alpha: ["FALSE", "0.05"]}
+      - {name: newwave, alpha: ["TRUE"]}  
   
   
 downsampling:
@@ -115,7 +152,42 @@ downsampling:
       - {name: normalisr_normvar, alpha: ["FALSE"]}
       - {name: sanity_map, alpha: ["FALSE"]}
       - {name: sanity_dists, alpha: ["FALSE"]}
-      
+      - {name: glmpca, alpha: ["FALSE"]}
+      - {name: newwave, alpha: ["TRUE"]}
+
+
+downsampling_for_stratification:
+  input_data: 
+    dataset: [smartSeq3_siRNA_knockdown]
+    seed: [1]
+  knn_construction: 
+    knn: [50]
+    pca: [50]
+    transformations:  
+      - {name: logp1, alpha: ["FALSE"]}
+      - {name: logp1_hvg, alpha: ["FALSE"]}
+      - {name: logp1_zscore, alpha: ["FALSE"]}
+      - {name: logp1_hvg_zscore, alpha: ["FALSE"]}
+      - {name: logp_cpm, alpha: ["FALSE"]}
+      - {name: logp1_size_normed, alpha: ["FALSE"]}
+      - {name: acosh, alpha: ["TRUE"]} 
+      - {name: logp_alpha, alpha: ["TRUE"]} 
+      - {name: pearson, alpha: ["TRUE"]} 
+      - {name: pearson_clip, alpha: ["TRUE"]} 
+      - {name: pearson_clip_hvg, alpha: ["TRUE"]} 
+      - {name: pearson_clip_zscore, alpha: ["TRUE"]} 
+      - {name: pearson_clip_hvg_zscore, alpha: ["TRUE"]} 
+      - {name: pearson_analytic, alpha: ["TRUE"]} 
+      - {name: sctransform, alpha: ["TRUE"]} 
+      - {name: rand_quantile, alpha: ["TRUE"]} 
+      - {name: dino, alpha: ["FALSE"]}
+      - {name: normalisr_normvar, alpha: ["FALSE"]}
+      - {name: sanity_map, alpha: ["FALSE"]}
+      - {name: sanity_dists, alpha: ["FALSE"]}
+      - {name: glmpca, alpha: ["FALSE"]}
+      - {name: newwave, alpha: ["TRUE"]}
+
+  
       
 downsampling_best_of:
   input_data: 
@@ -128,7 +200,9 @@ downsampling_best_of:
       - {name: logp1, alpha: ["FALSE"]}
       - {name: acosh, alpha: ["TRUE"]} 
       - {name: pearson_analytic, alpha: ["TRUE"]} 
-      - {name: sctransform, alpha: ["TRUE"]} 
+      - {name: pearson_clip, alpha: ["TRUE"]} 
       - {name: sanity_map, alpha: ["FALSE"]}
       - {name: dino, alpha: ["FALSE"]}
+      - {name: glmpca, alpha: ["FALSE"]}
+      - {name: newwave, alpha: ["TRUE"]}
   

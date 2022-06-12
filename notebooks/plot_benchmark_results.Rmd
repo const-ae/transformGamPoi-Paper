@@ -15,11 +15,11 @@ Load data
 ```{r}
 res <- bind_rows(
   read_tsv("../benchmark/output/benchmark_results/simulation_results.tsv") %>% 
-    transmute(benchmark = "simulation", overlap = mean_knn_overlap, knn, pca_dim, alpha = as.character(alpha), transformation, dataset = simulator, replicate = seed, duration_sec),
+    transmute(benchmark = "simulation", overlap = mean_knn_overlap, knn, pca_dim, alpha = as.character(alpha), transformation, dataset = simulator, replicate = seed, cputime_sec, elapsed_sec),
   read_tsv("../benchmark/output/benchmark_results/consistency_results.tsv") %>% 
-    transmute(benchmark = "consistency", overlap = mean_overlap, knn, pca_dim, alpha = as.character(alpha), transformation, dataset, replicate = seed, duration_sec),
+    transmute(benchmark = "consistency", overlap = mean_overlap, knn, pca_dim, alpha = as.character(alpha), transformation, dataset, replicate = seed, cputime_sec, elapsed_sec),
   read_tsv("../benchmark/output/benchmark_results/downsampling_results.tsv") %>% 
-    transmute(benchmark = "downsampling", overlap = overlap, knn, pca_dim, alpha = as.character(alpha), transformation, dataset, replicate = seed, duration_sec = duration_full_sec)
+    transmute(benchmark = "downsampling", overlap = overlap, knn, pca_dim, alpha = as.character(alpha), transformation, dataset, replicate = seed, cputime_sec = full_cputime_sec, elapsed_sec = full_elapsed_sec)
 ) %>%
   mutate(transformation = factor(transformation, levels = trans_families$transformation))
 res
@@ -38,7 +38,7 @@ parameter_choices <- bind_rows(
 ```
 
 ```{r}
-print(paste0(sum(res$duration_sec) / (60 * 60 * 24 * 356), " years total compute time"))
+print(paste0(sum(res$cputime_sec) / (60 * 60 * 24 * 356), " years total compute time"))
 ```
 
 
@@ -61,9 +61,10 @@ make_main_plot_panel <- function(data, add_group_label = FALSE){
     geom_vline(xintercept = 1, size = 0.3, linetype = 2) +
     ggbeeswarm::geom_quasirandom(color = "grey", size = 0.3, alpha = 0.7, groupOnX = FALSE) +
     stat_summary(geom = "point", position = position_dodge2(width = 0.3), fun.data = mean_cl_boot, fatten = 1.8) +
-    scale_y_grouped_discrete(grouping = ~ trans_families_labels[deframe(trans_families)[.x]], gap_size = 1.5, limits = rev,
+    scale_y_grouped_discrete(grouping = ~ trans_families_labels[deframe(trans_families)[.x]], gap_size = 1.7, limits = rev,
                              labels = trans_labels, add_group_label = add_group_label, guide = if(add_group_label) guide_grouped_axis() else guide_axis()) +
-    scale_x_continuous(limits = c(0.2, 1.8), breaks = c(0.5, 1, 1.5)) +
+    scale_x_continuous(breaks = c(0.5, 1, 1.5)) +
+    coord_cartesian(xlim = c(0.2, 1.8)) +
     scale_color_manual(values = trans_families_colors, labels = trans_families_labels, guide = "none") +
     theme_grouped_axis(axis.grouping.line_padding = unit(5, "pt"), axis.grouping.line_height = unit(10, "pt"), axis.grouping.label.y = element_text(size = font_size_small, angle = 90)) +
     theme(axis.title.y = element_blank(),  plot.title.position = "plot")
@@ -114,7 +115,7 @@ suppl_con_k10 <- res_alt_knn %>%
   filter(knn == 10) %>%
   filter(benchmark == "consistency") %>%
   make_main_plot_panel(add_group_label = TRUE) +
-  labs(x = "Relative $k$-NN\nOverlap", 
+  labs(x = "Relative $k$-NN Overlap", 
        title = "(A) Consistency: $k = 10$") +
   NULL
 
@@ -122,7 +123,7 @@ suppl_con_k100 <- res_alt_knn %>%
   filter(knn == 100) %>%
   filter(benchmark == "consistency") %>%
   make_main_plot_panel(add_group_label = TRUE) +
-  labs(x = "Relative $k$-NN\nOverlap", 
+  labs(x = "Relative $k$-NN Overlap", 
        title = "(B) Consistency: $k = 100$") +
   NULL
 
@@ -130,7 +131,7 @@ suppl_sim_k10 <- res_alt_knn %>%
   filter(knn == 10) %>%
   filter(benchmark == "simulation") %>%
   make_main_plot_panel(add_group_label = FALSE) +
-  labs(x = "Relative $k$-NN\nOverlap", 
+  labs(x = "Relative $k$-NN Overlap", 
        title = "(C) Simulation: $k = 10$") +
   NULL
 
@@ -138,7 +139,7 @@ suppl_sim_k100 <- res_alt_knn %>%
   filter(knn == 100) %>%
   filter(benchmark == "simulation") %>%
   make_main_plot_panel(add_group_label = FALSE) +
-  labs(x = "Relative $k$-NN\nOverlap", 
+  labs(x = "Relative $k$-NN Overlap", 
        title = "(D) Simulation: $k = 100$") +
   NULL
 
@@ -147,7 +148,7 @@ suppl_dow_k10 <- res_alt_knn %>%
   filter(knn == 10) %>%
   filter(benchmark == "downsampling") %>%
   make_main_plot_panel(add_group_label = FALSE) +
-  labs(x = "Relative $k$-NN\nOverlap", 
+  labs(x = "Relative $k$-NN Overlap", 
        title = "(E) Downsampling: $k = 10$") +
   NULL
 
@@ -155,7 +156,7 @@ suppl_dow_k100 <- res_alt_knn %>%
   filter(knn == 100) %>%
   filter(benchmark == "downsampling") %>%
   make_main_plot_panel(add_group_label = FALSE) +
-  labs(x = "Relative $k$-NN\nOverlap", 
+  labs(x = "Relative $k$-NN Overlap", 
        title = "(F) Downsampling: $k = 100$") +
   NULL
 
@@ -245,27 +246,27 @@ make_pca_plot_panel <- function(data, long_x_scale, breaks = c(0)){
 pca_pl_random_walk <- pca_dat %>%
   filter(dataset == "random_walk") %>%
   make_pca_plot_panel(long_x_scale = TRUE, breaks = c(0, 0.4, 0.8)) +
-  labs(title = "Random Walk") +
+  labs(title = "Random Walk (Simulation)") +
   theme(plot.title = element_text(face = "plain", size = font_size_small, hjust = 0.5, margin = margin(), lineheight = 0.8)) 
 
 pca_pl_scDesign2 <- pca_dat %>%
   filter(dataset == "scDesign2") %>%
   make_pca_plot_panel(long_x_scale = TRUE, breaks = c(0, 0.1, 0.2)) +
-  labs(title = "scDesign2") +
+  labs(title = "scDesign2 (Simulation)") +
   theme(plot.title = element_text(face = "plain", size = font_size_small, hjust = 0.5, margin = margin(), lineheight = 0.8)) 
 
 
 pca_pl_siRNA_kd <- pca_dat %>%
   filter(dataset == "smartSeq3_siRNA_knockdown") %>%
   make_pca_plot_panel(long_x_scale = FALSE, breaks = c(0, 0.1)) +
-  labs(title = "siRNA KD") +
+  labs(title = "siRNA KD (Downsampling)") +
    theme(plot.title = element_text(face = "plain", size = font_size_small, hjust = 0.5, margin = margin(), lineheight = 0.8)) 
 
 
 pca_pl_10X <- pca_dat %>%
   filter(dataset == "GSE179714") %>%
   make_pca_plot_panel(long_x_scale = FALSE, breaks = c(0, 0.2, 0.4, 0.6)) +
-  labs(title = "GSE179714") +
+  labs(title = "GSE179714 (Consistency)") +
   theme(plot.title = element_text(face = "plain", size = font_size_small, hjust = 0.5, margin = margin(), lineheight = 0.8)) 
 
 ```
@@ -289,18 +290,18 @@ plot_assemble(list(plot = consistency_pl,     x = 0,  y = 0,    width = 60, heig
 
 ```{r}
 sel_dataset <- "GSE179831" 
-rel_scaling_factor_lin <- median(filter(res, transformation == "logp1", dataset == sel_dataset, pca_dim == 10)$duration_sec)
+rel_scaling_factor_lin <- median(filter(res, transformation == "logp1", dataset == sel_dataset, pca_dim == 10)$cputime_sec)
 
 perf_plot <- res %>%
   filter(alpha %in% c("TRUE", "FALSE")) %>%
   filter(dataset == sel_dataset, pca_dim == 10, knn == 50) %>%
   tidylog::left_join(trans_families) %>%
-  ggplot(aes(x = transformation, y = duration_sec)) +
+  ggplot(aes(x = transformation, y = cputime_sec)) +
     geom_hline(yintercept = rel_scaling_factor_lin, linetype = 2, color = "grey", size = 0.3) +
     geom_hline(yintercept = rel_scaling_factor_lin * c(10, 100, 1000, 10000), linetype = 2, color = "grey", size = 0.1) +
     stat_summary(geom = "point", aes(color = family), position = position_dodge2(width = 0.3), fun.data = mean_sdl, fatten = 1.8) +
     geom_text(data = data.frame(y = 10^seq(0, 4)), aes(y = rel_scaling_factor_lin * y, label = paste0("$", y, "\\times$")),
-              x = 23.5, hjust = 1, vjust = -0.3, size = font_size_small / .pt) +
+              x = 27, hjust = 1, vjust = -0.3, size = font_size_small / .pt) +
     scale_x_grouped_discrete(grouping = ~ fct_rev(trans_families_labels[deframe(trans_families)[.x]]), gap_size = 1.5, 
                              labels = trans_labels, add_group_label = TRUE, guide =  guide_grouped_axis(angle = 90)) +
     scale_y_log10(breaks = c(0.001, 1, 60, 60 * 60, 24 * 60 * 60, 7 * 24 * 60 * 60), expand = expansion(mult = c(0.1, 0.01)),
@@ -335,16 +336,68 @@ res %>%
     transformation == "sanity_map" ~ "sanity_map",
     transformation == "logp1_hvg" ~ "logp1_hvg",
     transformation == "pearson_analytic" ~ "pearson_analytic",
+    transformation == "glmpca" ~ "glmpca",
     transformation == "dino" ~ "dino",
     TRUE ~ "other"
   )) %>%
-  ggplot(aes(x = n_cells, y = duration_sec)) +
+  ggplot(aes(x = n_cells, y = cputime_sec)) +
     geom_point() +
-    geom_line(aes(color = family, group = transformation)) +
+    # geom_line(aes(color = highlight, group = transformation)) +
+    geom_smooth(aes(color = highlight, group = transformation), method = "lm") +
     scale_x_log10() +
     scale_y_log10()
 ```
 
+```{r}
+# duration_dat <- res %>%
+#   # filter(alpha %in% c("TRUE", "FALSE")) %>%
+#   # filter(pca_dim == 10, knn == 50) %>%
+#   filter(knn == 50) %>%
+#   left_join(trans_families) %>%
+#   left_join(dataset_summaries %>% dplyr::select(-c(row_means, row_vars))) %>%
+#   mutate(highlight = case_when(
+#     transformation == "sanity_dists" ~ "sanity_dist",
+#     transformation == "sanity_map" ~ "sanity_map",
+#     transformation == "logp1_hvg" ~ "logp1_hvg",
+#     transformation == "pearson_analytic" ~ "pearson_analytic",
+#     transformation == "glmpca" ~ "glmpca",
+#     transformation == "dino" ~ "dino",
+#     TRUE ~ "other"
+#   )) %>%
+#   filter(highlight != "other") %>%
+#   filter(!is.na(cputime_sec)) %>%
+#   mutate(pca_dim = pmin(pca_dim, n_cells, n_genes))
+# 
+# fit <- lm(cputime_sec ~ transformation * (n_genes + I(n_genes^2) + poly(n_cells, 4) + poly(pca_dim, 4)) -1, data = duration_dat)
+# # fit <- lm(log(cputime_sec) ~ transformation * (poly(n_genes, 3) + poly(n_cells, 4) + poly(pca_dim, 4)) -1, data = duration_dat)
+# summary(fit)
+# 
+# predict_df <- duration_dat %>%
+#   dplyr::select(transformation, n_genes, n_cells, proportion_zeros) %>%
+#   mutate(cputime_sec = (predict(fit, newdata = duration_dat)))
+# 
+# resid_df <- bind_cols(duration_dat, error = residuals(fit, newdata = duration_dat))
+# resid_df %>%
+#   ggplot(aes(x = n_cells, y = error, color = as.factor(pca_dim))) +
+#     geom_hline(yintercept = 0) +
+#     geom_point() +
+#     facet_wrap(vars(transformation), scales = "free")
+# 
+# duration_dat %>%
+#   ggplot(aes(x = n_cells, y = cputime_sec, color = transformation)) +
+#     geom_point() +
+#     geom_line(data = predict_df) +
+#     # coord_trans(y = "log10", ylim = c(1, 1e7)) 
+#     facet_wrap(vars(transformation), scales = "free_y")
+# 
+# cross_df(list(n_genes = 10000, proportion_zeros = 0.8, pca_dim = 40, n_cells = seq(1000, 3e4, length.out = 101), dataset = "scDesign2",
+#              transformation = c("sanity_dists", "sanity_map", "logp1_hvg", "pearson_analytic", "glmpca", "dino"))) %>%
+#   mutate(cputime_sec = (predict(fit, newdata = .))) %>%
+#   ggplot(aes(x = n_cells, y = cputime_sec, color = transformation)) +
+#     geom_line() +
+#     facet_wrap(vars(transformation), scales = "free_y")
+
+```
 
 
 ```{r}
@@ -368,7 +421,7 @@ res %>%
     transformation == "dino" ~ "dino",
     TRUE ~ "other"
   )) %>%
-  ggplot(aes(x = n_cells, y = duration_sec)) +
+  ggplot(aes(x = n_cells, y = cputime_sec)) +
     ggrastr::rasterise(ggbeeswarm::geom_quasirandom(alpha = 0.1, color = "#E1E1E1", size = 0.1), dpi = 300) +
     geom_smooth(aes(group = transformation, color = highlight), method = "lm", size = 0.6, se = FALSE) +
     geom_rug(data = time_minor_ticks, aes(y = ticks, x = 0), sides = "l", color = "black", length = unit(0.3, "mm")) +
@@ -386,7 +439,7 @@ scaling_plot <- res %>%
   filter(pca_dim == 10) %>%
   left_join(trans_families) %>%
   left_join(dataset_summaries %>% dplyr::select(-c(row_means, row_vars))) %>%
-  ggplot(aes(x = n_cells, y = duration_sec)) +
+  ggplot(aes(x = n_cells, y = cputime_sec)) +
     ggrastr::rasterise(ggbeeswarm::geom_quasirandom(alpha = 0.1, color = "#E1E1E1", size = 0.1), dpi = 300) +
     geom_smooth(aes(group = transformation, color = family), method = "lm", size = 0.6, se = FALSE) +
     geom_rug(data = time_minor_ticks, aes(y = ticks, x = 0), sides = "l", color = "black", length = unit(0.3, "mm")) +
@@ -410,9 +463,11 @@ plot_assemble(list(plot = perf_plot,          x = 0, y = 0,   width = 90, height
               list(plot = scaling_plot,       x = 0, y = 60,  width = 81, height = 40),
               annotate_text("Sanity\nDistance", fontsize = font_size_small, x = 77, y = 69),
               annotate_text("Sanity MAP", fontsize = font_size_small, x = 77, y = 72),
-              annotate_text("Dino", fontsize = font_size_small, x = 77, y = 75),
-              annotate_text("...", fontsize = font_size_small, x = 80, y = 80, angle = 90),
-              annotate_text("$\\log(x/s+1)$\n\\;$\\rightarrow$HVG", fontsize = font_size_small, x = 77, y = 88),
+              annotate_text("GLM PCA", fontsize = font_size_small, x = 77, y = 74.5),
+              list(plot = grid::linesGrob(x = c(1,0), y = c(0,1), default.units = "npc", gp = grid::gpar(col = "black", lty = 1, lwd = 0.5)), x = 76.1, y = 75, width = 0.8, height = 1),
+              annotate_text("Dino", fontsize = font_size_small, x = 77, y = 77.5),
+              annotate_text("...", fontsize = font_size_small, x = 80, y = 82.5, angle = 90),
+              annotate_text("$\\log(x/s+1)$\n\\;$\\rightarrow$HVG", fontsize = font_size_small, x = 77, y = 89),
               width = 90, height = 100, units = "mm", show_grid_lines = FALSE,
               filename = "../output/main_duration.pdf", latex_support = TRUE)
 ```
