@@ -290,17 +290,17 @@ plot_assemble(list(plot = consistency_pl,     x = 0,  y = 0,    width = 60, heig
 
 ```{r}
 sel_dataset <- "GSE179831" 
-rel_scaling_factor_lin <- median(filter(res, transformation == "logp1", dataset == sel_dataset, pca_dim == 10)$cputime_sec)
+rel_scaling_factor_lin <- median(filter(res, transformation == "logp1", dataset == sel_dataset, pca_dim == 10, knn == 50)$cputime_sec)
 
 perf_plot <- res %>%
   filter(alpha %in% c("TRUE", "FALSE")) %>%
   filter(dataset == sel_dataset, pca_dim == 10, knn == 50) %>%
   tidylog::left_join(trans_families) %>%
   ggplot(aes(x = transformation, y = cputime_sec)) +
-    geom_hline(yintercept = rel_scaling_factor_lin, linetype = 2, color = "grey", size = 0.3) +
-    geom_hline(yintercept = rel_scaling_factor_lin * c(10, 100, 1000, 10000), linetype = 2, color = "grey", size = 0.1) +
+    geom_hline(yintercept = rel_scaling_factor_lin, linetype = 2, color = "darkgrey", size = 0.5) +
+    geom_hline(yintercept = rel_scaling_factor_lin * c(10, 100, 1000, 10000), linetype = 2, color = "grey", size = 0.3) +
     stat_summary(geom = "point", aes(color = family), position = position_dodge2(width = 0.3), fun.data = mean_sdl, fatten = 1.8) +
-    geom_text(data = data.frame(y = 10^seq(0, 4)), aes(y = rel_scaling_factor_lin * y, label = paste0("$", y, "\\times$")),
+    geom_text(data = data.frame(y = 10^seq(0, 4), y_lab = c("1", "10", "100", "1\\,000", "10\\,000")), aes(y = rel_scaling_factor_lin * y, label = paste0("$", y_lab, "\\times$")),
               x = 27, hjust = 1, vjust = -0.3, size = font_size_small / .pt) +
     scale_x_grouped_discrete(grouping = ~ fct_rev(trans_families_labels[deframe(trans_families)[.x]]), gap_size = 1.5, 
                              labels = trans_labels, add_group_label = TRUE, guide =  guide_grouped_axis(angle = 90)) +
@@ -311,7 +311,7 @@ perf_plot <- res %>%
     scale_color_manual(values = trans_families_colors, guide = "none") +
     theme_grouped_axis(axis.grouping.line_padding = unit(5, "pt"), axis.grouping.line_height = unit(10, "pt"), axis.grouping.label.x = element_text(size = font_size_small)) +
     theme(axis.title.x = element_blank(), axis.text.y.right = element_blank(), axis.ticks.y.right = element_blank(), plot.title.position = "plot") +
-    labs(title = "(A) Computational expense for transf. and $k$-NN calculation", y = "")
+    labs(title = "(A) Computational expense for transform and $k$-NN calculation", y = "")
   
 
 perf_plot
@@ -422,7 +422,7 @@ res %>%
     TRUE ~ "other"
   )) %>%
   ggplot(aes(x = n_cells, y = cputime_sec)) +
-    ggrastr::rasterise(ggbeeswarm::geom_quasirandom(alpha = 0.1, color = "#E1E1E1", size = 0.1), dpi = 300) +
+    ggrastr::rasterise(ggbeeswarm::geom_quasirandom(alpha = 0.2, color = "grey", size = 0.1), dpi = 300) +
     geom_smooth(aes(group = transformation, color = highlight), method = "lm", size = 0.6, se = FALSE) +
     geom_rug(data = time_minor_ticks, aes(y = ticks, x = 0), sides = "l", color = "black", length = unit(0.3, "mm")) +
     geom_rug(data = time_major_ticks, aes(y = ticks, x = 0), sides = "l", color = "black", length = unit(0.5, "mm")) +
@@ -440,7 +440,7 @@ scaling_plot <- res %>%
   left_join(trans_families) %>%
   left_join(dataset_summaries %>% dplyr::select(-c(row_means, row_vars))) %>%
   ggplot(aes(x = n_cells, y = cputime_sec)) +
-    ggrastr::rasterise(ggbeeswarm::geom_quasirandom(alpha = 0.1, color = "#E1E1E1", size = 0.1), dpi = 300) +
+    ggrastr::rasterise(ggbeeswarm::geom_quasirandom(alpha = 0.2, color = "grey", size = 0.1), dpi = 300) +
     geom_smooth(aes(group = transformation, color = family), method = "lm", size = 0.6, se = FALSE) +
     geom_rug(data = time_minor_ticks, aes(y = ticks, x = 0), sides = "l", color = "black", length = unit(0.3, "mm")) +
     geom_rug(data = time_major_ticks, aes(y = ticks, x = 0), sides = "l", color = "black", length = unit(0.5, "mm")) +
@@ -462,7 +462,7 @@ scaling_plot
 plot_assemble(list(plot = perf_plot,          x = 0, y = 0,   width = 90, height = 60),
               list(plot = scaling_plot,       x = 0, y = 60,  width = 81, height = 40),
               annotate_text("Sanity\nDistance", fontsize = font_size_small, x = 77, y = 69),
-              annotate_text("Sanity MAP", fontsize = font_size_small, x = 77, y = 72),
+              annotate_text("Sanity MAP", fontsize = font_size_small, x = 77, y = 71.7),
               annotate_text("GLM PCA", fontsize = font_size_small, x = 77, y = 74.5),
               list(plot = grid::linesGrob(x = c(1,0), y = c(0,1), default.units = "npc", gp = grid::gpar(col = "black", lty = 1, lwd = 0.5)), x = 76.1, y = 75, width = 0.8, height = 1),
               annotate_text("Dino", fontsize = font_size_small, x = 77, y = 77.5),
@@ -471,6 +471,26 @@ plot_assemble(list(plot = perf_plot,          x = 0, y = 0,   width = 90, height
               width = 90, height = 100, units = "mm", show_grid_lines = FALSE,
               filename = "../output/main_duration.pdf", latex_support = TRUE)
 ```
+
+
+```{r}
+res %>%
+  group_by(transformation) %>%
+  summarize(cputime_year = round(sum(cputime_sec, na.rm=TRUE) / (60 * 60 * 24 * 365)))
+```
+
+
+```{r}
+res %>%
+  group_by(benchmark, pca_dim, knn, dataset, replicate) %>%
+  transmute(transformation, cputime_sec, logp1_time = cputime_sec[which(transformation == "logp1")[1]]) %>%
+  mutate(relative = cputime_sec / logp1_time) %>%
+  ungroup() %>%
+  group_by(transformation) %>%
+  summarize(mean = mean(relative, na.rm = TRUE), median = median(relative, na.rm = TRUE), quantile_10perc = quantile(relative, 0.1, na.rm = TRUE), quantile_90perc = quantile(relative, 0.9, na.rm = TRUE),
+            quantile_25perc = quantile(relative, 0.25, na.rm = TRUE), quantile_75perc = quantile(relative, 0.75, na.rm = TRUE))
+```
+
 
 
 
