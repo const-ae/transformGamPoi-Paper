@@ -25,7 +25,7 @@ make_summary <- function(UMI, id, name, benchmark){
   row_vars <- MatrixGenerics::rowVars(UMI_sf_filtered)
   
   tibble(id = id, name = name, benchmark = benchmark,
-         n_cells = nrow(UMI), n_genes = ncol(UMI),
+         n_cells = ncol(UMI), n_genes = nrow(UMI),
          proportion_zeros = sum(UMI == 0) / (n_cells * n_genes),
          quantile025_count = quantiles[1], quantile050_count = quantiles[2], quantile075_count = quantiles[3],
          quantile090_count = quantiles[4], quantile099_count = quantiles[5],
