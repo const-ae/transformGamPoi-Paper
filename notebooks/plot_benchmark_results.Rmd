@@ -476,7 +476,15 @@ plot_assemble(list(plot = perf_plot,          x = 0, y = 0,   width = 90, height
 ```{r}
 res %>%
   group_by(transformation) %>%
-  summarize(cputime_year = round(sum(cputime_sec, na.rm=TRUE) / (60 * 60 * 24 * 365)))
+  summarize(cputime_year = sum(cputime_sec) / (60 * 60 * 24 * 365)) %>%
+  mutate(relative = round(cputime_year / sum(cputime_year), 3),
+         cputime_year = round(cputime_year, 1))
+res %>%
+  left_join(trans_families) %>%
+  group_by(family) %>%
+  summarize(cputime_year = sum(cputime_sec) / (60 * 60 * 24 * 365)) %>%
+  mutate(relative = round(cputime_year / sum(cputime_year), 3),
+         cputime_year = round(cputime_year, 1))
 ```
 
 
