@@ -58,7 +58,15 @@ tmp <- enframe(transformed_dat, name = "transformation", value = "transformed_da
   add_row(transformation = "raw", transformed_data = list(Y)) %>%
   mutate(pca = map2(transformation, transformed_data, function(name, dat){
    if(name == "sanity_dists") cmdscale(as.matrix(dat), k = 10)
-   else irlba::prcomp_irlba(t(dat), n = 10)$x 
+   else if(name == "glmpca"){
+    pca_res <- glmpca::glmpca(Y = dat, L = 10, fam = if(isFALSE(attr(dat, "alpha"))) "poi" else "nb",
+                              sz = attr(dat, "size_factor"), nb_theta = 1/attr(dat, "alpha"))
+    as.matrix(pca_res$factors)
+   }else if(name == "newwave"){
+    se <- SummarizedExperiment::SummarizedExperiment(assay = list(counts = dat))
+    pca_res <- NewWave::newWave(Y = se, K = 10, n_gene_disp = 100, children = 4)
+    SingleCellExperiment::reducedDim(pca_res, "newWave")
+   }else irlba::prcomp_irlba(t(dat), n = 10)$x 
   })) %>%
   transmute(transformation, pca, cell_name = list(paste0("cell_", seq_len(ncol(Y))))) %>%
   unnest(c(pca, cell_name)) %>%
@@ -69,18 +77,20 @@ tmp <- enframe(transformed_dat, name = "transformation", value = "transformed_da
 ```{r}
 
 can_cor_res <- tmp %>%
-  mutate(transformation2 = factor(transformation, levels = c(as.character(trans_families$transformation), "raw")),
+  mutate(transformation2 = factor(transformation, levels = c("raw", as.character(trans_families$transformation))),
          transformation_labelled = factor(as.character(c(trans_labels, raw = "Raw")[as.character(transformation2)]), 
-                                          levels = as.character(c(trans_labels, raw = "Raw")[c(levels(trans_families$transformation), "raw")]))) %>%
+                                          levels = as.character(c(trans_labels, raw = "Raw")[c("raw", levels(trans_families$transformation))]))) %>%
   group_by(transformation, transformation_labelled) %>%
   summarize(canonical_correlation = cancor(pca, size_factor)$cor, .groups = "drop") %>%
-  left_join(add_row(trans_families, transformation = "raw", family = "raw")) 
+  left_join(add_row(trans_families, transformation = "raw", family = "raw")) %>%
+  mutate(family = ifelse(family == "count_model", "raw",family)) 
 
 res <- tmp %>%
-  mutate(transformation2 = factor(transformation, levels = c(as.character(trans_families$transformation), "raw")),
+  mutate(transformation2 = factor(transformation, levels = c("raw", as.character(trans_families$transformation))),
          transformation_labelled = factor(as.character(c(trans_labels, raw = "Raw")[as.character(transformation2)]), 
-                                          levels = as.character(c(trans_labels, raw = "Raw")[c(levels(trans_families$transformation), "raw")]))) %>% 
+                                          levels = as.character(c(trans_labels, raw = "Raw")[c("raw", levels(trans_families$transformation))]))) %>% 
   left_join(add_row(trans_families, transformation = "raw", family = "raw")) %>%
+  mutate(family = ifelse(family == "count_model", "raw",family)) %>%
   mutate(family = factor(family, levels = c("raw", "delta_method", "glm_residual", "latent_expr"))) %>%
   group_by(transformation) %>%
   mutate(pca = pca * 10 / quantile(abs(pca), 0.99)) %>%
@@ -89,9 +99,10 @@ res <- tmp %>%
     cat <- key[[1]][1]
     ggplot(dat, aes(x = pca[,1], y = pca[,2])) +
       geom_hline(yintercept = -15, size = 0.4) + geom_vline(xintercept = -15, size = 0.4) +
-      geom_point(aes(color = size_factor), size = 0.7) +
+      ggrastr::rasterize(geom_point(aes(color = size_factor), size = 0.7), dpi = 300, scale = 2/3) +
       shadowtext::geom_shadowtext(data = filter(can_cor_res, family == cat), aes(label = paste0("$\\rho = ", signif(canonical_correlation, digits = 2), "$")),
-                                  x = 0, y = -Inf,  hjust = 0.5, vjust = -0.5, size = font_size_small / .pt, color = "black", bg.colour = "white", inherit.aes = FALSE) +
+                                  x = 0, y = -Inf,  hjust = 0.5, vjust = -0.5, size = font_size_small / .pt,
+                                  color = "black", bg.colour = "white", inherit.aes = FALSE) +
       ggh4x::facet_wrap2(vars(transformation_labelled), ncol = 4, strip = ggh4x::strip_vanilla(clip = "off"), trim_blank = FALSE) +
       coord_fixed(xlim = c(-15, 15), ylim = c(-15, 15)) +
       scale_x_continuous(expand = expansion(0)) +
