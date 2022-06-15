@@ -74,14 +74,14 @@ consistency_pl <- res_main %>%
   filter(benchmark == "consistency") %>%
   make_main_plot_panel(add_group_label = TRUE) +
   labs(x = "Relative $k$-NN Overlap", 
-       title = "(A) Consistency", subtitle = "10X gene subset A vs. gene subset B") +
+       subtitle = "10X gene subset A vs. gene subset B") +
   NULL
 
 simulation_pl <- res_main %>%
   filter(benchmark == "simulation") %>%
   make_main_plot_panel(add_group_label = FALSE) +
   labs(x = "Relative $k$-NN Overlap", 
-       title = "(B) Simulation", subtitle = "Ground truth vs. simulated counts") +
+       subtitle = "Ground truth vs. simulated counts") +
   NULL
 
 
@@ -89,7 +89,7 @@ downsampling_pl <- res_main %>%
   filter(benchmark == "downsampling") %>%
   make_main_plot_panel(add_group_label = FALSE) +
   labs(x = "Relative $k$-NN Overlap", 
-       title = "(C) Downsampling", subtitle = "Original vs. downsampled Smart-seq3 data") +
+       subtitle = "Original vs. downsampled Smart-seq3 data") +
   NULL
 
 consistency_pl
@@ -224,7 +224,7 @@ plot_assemble(
 pca_dat <- res %>%
   filter(alpha %in% c("TRUE", "FALSE")) %>%
   filter(knn == 50) %>%
-  mutate(knn_recovery = overlap / knn) %>%
+  mutate(knn_recovery = overlap) %>%
   tidylog::group_by(benchmark, dataset, pca_dim, transformation) %>%
   tidylog::summarize(knn_recovery = mean(knn_recovery), .groups = "drop") %>%
   tidylog::left_join(trans_families) %>%
@@ -240,32 +240,32 @@ make_pca_plot_panel <- function(data, long_x_scale, breaks = c(0)){
     scale_color_manual(values = trans_families_colors) +
     scale_y_continuous(limits = c(0, NA), breaks = breaks) +
     scale_linetype_manual(values = c(`TRUE` = "dashed", `FALSE`  = "solid")) +
-    labs(y = "Rel.~$k$-NN\nOverlap", x = "\\#PCA-dimensions")
+    labs(y = "$k$-NN\nOverlap", x = "\\#PCA-dimensions")
 }
 
 pca_pl_random_walk <- pca_dat %>%
   filter(dataset == "random_walk") %>%
-  make_pca_plot_panel(long_x_scale = TRUE, breaks = c(0, 0.4, 0.8)) +
+  make_pca_plot_panel(long_x_scale = TRUE, breaks = c(0, 20, 40)) +
   labs(title = "Random Walk (Simulation)") +
   theme(plot.title = element_text(face = "plain", size = font_size_small, hjust = 0.5, margin = margin(), lineheight = 0.8)) 
 
 pca_pl_scDesign2 <- pca_dat %>%
   filter(dataset == "scDesign2") %>%
-  make_pca_plot_panel(long_x_scale = TRUE, breaks = c(0, 0.1, 0.2)) +
+  make_pca_plot_panel(long_x_scale = TRUE, breaks = c(0, 5, 10)) +
   labs(title = "scDesign2 (Simulation)") +
   theme(plot.title = element_text(face = "plain", size = font_size_small, hjust = 0.5, margin = margin(), lineheight = 0.8)) 
 
 
 pca_pl_siRNA_kd <- pca_dat %>%
   filter(dataset == "smartSeq3_siRNA_knockdown") %>%
-  make_pca_plot_panel(long_x_scale = FALSE, breaks = c(0, 0.1)) +
+  make_pca_plot_panel(long_x_scale = FALSE, breaks = c(0, 5)) +
   labs(title = "siRNA KD (Downsampling)") +
    theme(plot.title = element_text(face = "plain", size = font_size_small, hjust = 0.5, margin = margin(), lineheight = 0.8)) 
 
 
 pca_pl_10X <- pca_dat %>%
   filter(dataset == "GSE179714") %>%
-  make_pca_plot_panel(long_x_scale = FALSE, breaks = c(0, 0.2, 0.4, 0.6)) +
+  make_pca_plot_panel(long_x_scale = FALSE, breaks = c(0, 25)) +
   labs(title = "GSE179714 (Consistency)") +
   theme(plot.title = element_text(face = "plain", size = font_size_small, hjust = 0.5, margin = margin(), lineheight = 0.8)) 
 
@@ -273,15 +273,21 @@ pca_pl_10X <- pca_dat %>%
 
 
 ```{r}
-plot_assemble(list(plot = consistency_pl,     x = 0,  y = 0,    width = 60, height = 75),
-              list(plot = simulation_pl,      x = 60, y = 0,    width = 60, height = 75),
-              list(plot = downsampling_pl,    x = 120,  y = 0,   width = 60, height = 75),
-              annotate_text("(D) $k$-NN overlap depends on \\#PCA-dimensions", x = 2, y = 78, fontsize = font_size, fontface = "bold"),
-              list(plot = pca_pl_random_walk, x = 0,   y = 78,  width = 44, height = 23),
-              list(plot = pca_pl_scDesign2,   x = 45,  y = 78,  width = 44, height = 23),
-              list(plot = pca_pl_siRNA_kd,    x = 90,  y = 78,  width = 44, height = 23),
-              list(plot = pca_pl_10X,         x = 135, y = 78,  width = 44, height = 23),
-              width = 180, height = 101, units = "mm", show_grid_lines = FALSE,
+plot_assemble(annotate_text("(A) Consistency", x = 2, y =1, vjust = 1, fontsize = font_size, fontface = "bold"),
+              annotate_text("(B) Simulation", x = 62, y = 1, vjust = 1, fontsize = font_size, fontface = "bold"),
+              annotate_text("(C) Downsampling", x = 122, y = 1, vjust = 1, fontsize = font_size, fontface = "bold"),
+              annotate_graphic("../illustrations/benchmark_overviewArtboard 1.pdf", x = 32,  y = 104, units = "mm"),
+              annotate_graphic("../illustrations/benchmark_overviewArtboard 3.pdf", x = 92,  y = 104, units = "mm"),
+              annotate_graphic("../illustrations/benchmark_overviewArtboard 2.pdf", x = 152, y = 104, units = "mm"),
+              list(plot = consistency_pl,     x = 0,  y = 18,    width = 60, height = 70),
+              list(plot = simulation_pl,      x = 60, y = 18,    width = 60, height = 70),
+              list(plot = downsampling_pl,    x = 120,  y = 18,   width = 60, height = 70),
+              annotate_text("(D) $k$-NN overlap depends on \\#PCA-dimensions", x = 2, y = 92, fontsize = font_size, fontface = "bold"),
+              list(plot = pca_pl_random_walk, x = 0,   y = 92,  width = 44, height = 23),
+              list(plot = pca_pl_scDesign2,   x = 45,  y = 92,  width = 44, height = 23),
+              list(plot = pca_pl_siRNA_kd,    x = 90,  y = 92,  width = 44, height = 23),
+              list(plot = pca_pl_10X,         x = 135, y = 92,  width = 44, height = 23),
+              width = 180, height = 115, units = "mm", show_grid_lines = FALSE,
               filename = "../output/main_benchmark_fig.pdf", latex_support = TRUE)
 ```
 

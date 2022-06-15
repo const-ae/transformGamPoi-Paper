@@ -80,6 +80,7 @@ save_plot <- function(filename, plot = ggplot2::last_plot(), width = 6.2328, hei
 
 plot_assemble <- function(..., .plot_objs = NULL, width = 6.2328, height = 3.71, units = c("inches", "cm", "mm", "px"), latex_support = FALSE, show_grid_lines = TRUE, filename = NULL){
   units <- match.arg(units)
+  
   plots <- if(is.null(.plot_objs)){
     list(...)
   }else{
@@ -109,10 +110,14 @@ plot_assemble <- function(..., .plot_objs = NULL, width = 6.2328, height = 3.71,
       }))
     }
   }
+  
+  
   plotgardener::pageCreate(width = width, height = height, default.units = units, xgrid = diff(x_breaks)[1], ygrid = diff(y_breaks)[1], showGuides = show_grid_lines)
   for(obj in plots){
     if(is.ggplot(obj)){
       plotgardener::plotGG(obj, x = 0, y = 0, width = width, height = height, default.units = units)
+    }else if(grid::is.grob(obj)){
+      grid::grid.draw(obj)
     }else if(is.list(obj)){
       stopifnot(! is.null(names(obj)))
       stopifnot("plot" %in% names(obj))
@@ -146,5 +151,15 @@ plot_assemble <- function(..., .plot_objs = NULL, width = 6.2328, height = 3.71,
 
 annotate_text <- function(label, x = 0, y = 0, fontsize = 12, hjust = 0, vjust = 0, ...){
   list(plot = cowplot::ggdraw() + cowplot::draw_label(label, size = fontsize, hjust = hjust, vjust = vjust, ...), x = x, y = y, width =0, height = 0)
+}
+
+# Note that x and y are from the lower left corner (instead of upper left :/)
+annotate_graphic <- function(filename, x = 0, y = 0, units = c("inches", "cm", "mm", "px", "user")){
+  stopifnot(file.exists(filename))
+  units <- match.arg(units)
+  abs_filepath <- tools::file_path_as_absolute(filename)
+  tikzDevice::grid.tikzNode(x = x, y = y, units = units, opts = "draw=none,fill=none",  
+                            content = paste0(r"(\includegraphics{")", abs_filepath, r"("})"),
+                            draw = FALSE)
 }
 
