@@ -2,6 +2,8 @@
 library(tidyverse)
 source("src/job_management_utils.R")
 
+benchmark_complete <- TRUE
+
 ##### Benchmark Results #####
 consistency <- readRDS(file.path("output/job_storage/consistency_job.RDS"))
 simulation <- readRDS(file.path("output/job_storage/simulation_job.RDS"))
@@ -14,6 +16,7 @@ if(job_status(consistency) == "done"){
   message("save consistency")
   file.copy(file.path(.OUTPUT_FOLDER, "results", consistency$result_id), "output/benchmark_results/consistency_results.tsv", overwrite = TRUE)
 }else{
+  benchmark_complete <- FALSE
   job_stats <- sapply(consistency$dependencies, job_status)
   message("Job stats for Consistency")
   print(table(job_stats))
@@ -22,6 +25,7 @@ if(job_status(simulation) == "done"){
   message("save simulation")
   file.copy(file.path(.OUTPUT_FOLDER, "results", simulation$result_id), "output/benchmark_results/simulation_results.tsv", overwrite = TRUE)
 }else{
+  benchmark_complete <- FALSE
   job_stats <- sapply(simulation$dependencies, job_status)
   message("Job stats for Simulation")
   print(table(job_stats))
@@ -30,6 +34,7 @@ if(job_status(downsampling) == "done"){
   message("save downsampling")
   file.copy(file.path(.OUTPUT_FOLDER, "results", downsampling$result_id), "output/benchmark_results/downsampling_results.tsv", overwrite = TRUE)
 }else{
+  benchmark_complete <- FALSE
   job_stats <- sapply(downsampling$dependencies, job_status)
   message("Job stats for downsampling")
   print(table(job_stats))
@@ -38,6 +43,7 @@ if(job_status(downsampling_best_of) == "done"){
   message("save downsampling_best_of")
   file.copy(file.path(.OUTPUT_FOLDER, "results", downsampling_best_of$result_id), "output/benchmark_results/downsampling_best_of_results.tsv", overwrite = TRUE)
 }else{
+  benchmark_complete <- FALSE
   job_stats <- sapply(downsampling_best_of$dependencies, job_status)
   message("Job stats for downsampling_best_of")
   print(table(job_stats))
@@ -64,6 +70,7 @@ if(all(sapply(sim_plots, job_status) == "done") && all(sapply(con_plots, job_sta
   )
   saveRDS(plots, file.path("output/benchmark_results/dataset_plot_data.RDS"))
 }else{
+  benchmark_complete <- FALSE
   message("Job stats for Consistency Plots")
   print(table(sapply(con_plots, job_status)))
   message("Job stats for Simulation Plots")
@@ -93,6 +100,7 @@ if(all(sapply(simulation_strat_jobs, job_status) == "done")){
   })) %>%
     write_tsv("output/benchmark_results/simulation_stratefication_results.tsv")
 }else{
+  benchmark_complete <- FALSE
   message("Job stats for simulation_strat_jobs:")
   print(table(sapply(simulation_strat_jobs, job_status)))
 }
@@ -105,6 +113,7 @@ if(all(sapply(consistency_strat_jobs, job_status) == "done")){
   })) %>%
     write_tsv("output/benchmark_results/consistency_stratefication_results.tsv")
 }else{
+  benchmark_complete <- FALSE
   message("Job stats for consistency_strat_jobs:")
   print(table(sapply(consistency_strat_jobs, job_status)))
 }
@@ -117,6 +126,15 @@ if(all(sapply(downsampling_strat_jobs, job_status) == "done")){
   })) %>%
     write_tsv("output/benchmark_results/downsampling_stratefication_results.tsv")
 }else{
+  benchmark_complete <- FALSE
   message("Job stats for downsampling_strat_jobs:")
   print(table(sapply(downsampling_strat_jobs, job_status)))
 }
+
+
+if(benchmark_complete){
+  print("The benchmark is complete. All results were stored in 'output/benchmark_results'")
+}else{
+  print("!!!!!!!!The benchmark is not complete!!!!!\nOnly some results were stored in 'output/benchmark_results'")
+}
+
