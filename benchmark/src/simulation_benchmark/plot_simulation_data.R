@@ -15,11 +15,15 @@ print(pa)
 ground_truth <- readRDS(file.path(pa$working_dir, "/results", pa$input_id))$ground_truth
 counts <- readRDS(file.path(pa$working_dir, "/results", pa$input_id))$UMI
 
-log_counts <- scuttle::normalizeCounts(counts)
+source("src/transformations/transformation_helper.R")
+sf <- MatrixGenerics::colSums2(counts)
+sf <- sf / mean(sf)
+log_counts <- logp1_fnc(counts, sf, alpha = FALSE)
+pca_log_counts <- BiocSingular::runPCA(t(log_counts), rank = 2, get.rotation = FALSE, BSPARAM = BiocSingular::FastAutoParam())$x
+
+
 
 pca_gt <- scater::calculatePCA(ground_truth, ncomponents = 2)
-pca_log_counts <- scater::calculatePCA(log_counts, ncomponents = 2)
-
 tsne_gt <- scater::calculateTSNE(ground_truth)
 tsne_log_counts <- scater::calculateTSNE(log_counts)
 

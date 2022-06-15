@@ -10,16 +10,23 @@ pa <- argparser::parse_args(pa)
 
 print(pa)
 
+source("src/transformations/transformation_helper.R")
 
 # Get ground truth and simulated data
 counts_full <- readRDS(file.path(pa$working_dir, "/results", pa$input_id))$full
 counts_reduced <- readRDS(file.path(pa$working_dir, "/results", pa$input_id))$reduced
 
-log_counts_full <- scuttle::normalizeCounts(counts_full)
-log_counts_reduced <- scuttle::normalizeCounts(counts_reduced)
+sf_full <- MatrixGenerics::colSums2(counts_full)
+sf_full <- sf_full / mean(sf_full)
+sf_reduced <- MatrixGenerics::colSums2(counts_reduced)
+sf_reduced <- sf_reduced / mean(sf_reduced)
 
-pca_log_counts_full <- scater::calculatePCA(log_counts_full, ncomponents = 2)
-pca_log_counts_reduced <- scater::calculatePCA(log_counts_reduced, ncomponents = 2)
+
+log_counts_full <- logp1_fnc(counts_full, sf_full, alpha = FALSE)
+log_counts_reduced <- logp1_fnc(counts_reduced, sf_reduced, alpha = FALSE)
+
+pca_log_counts_full <-  BiocSingular::runPCA(t(log_counts_full), rank = 2, get.rotation = FALSE, BSPARAM = BiocSingular::FastAutoParam())$x
+pca_log_counts_reduced <-  BiocSingular::runPCA(t(log_counts_reduced), rank = 2, get.rotation = FALSE, BSPARAM = BiocSingular::FastAutoParam())$x
 
 tsne_log_counts_full <- scater::calculateTSNE(log_counts_full)
 tsne_log_counts_reduced <- scater::calculateTSNE(log_counts_reduced)

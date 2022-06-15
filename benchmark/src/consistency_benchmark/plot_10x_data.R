@@ -8,13 +8,13 @@ pa <- argparser::parse_args(pa)
 
 print(pa)
 
-
-# Get ground truth and simulated data
 counts <- readRDS(file.path(pa$working_dir, "/results", pa$input_id))
 
-log_counts <- scuttle::normalizeCounts(counts)
-
-pca_log_counts <- scater::calculatePCA(log_counts, ncomponents = 20)
+source("src/transformations/transformation_helper.R")
+sf <- MatrixGenerics::colSums2(counts)
+sf <- sf / mean(sf)
+log_counts <- logp1_fnc(counts, sf, alpha = FALSE)
+pca_log_counts <- BiocSingular::runPCA(t(log_counts), rank = 20, get.rotation = FALSE, BSPARAM = BiocSingular::FastAutoParam())$x
 
 tsne_log_counts <- scater::calculateTSNE(log_counts)
 
