@@ -80,11 +80,15 @@ ami_pl
 ```
 
 
+
 ```{r}
-correl_dat <- res %>%
+dat <- res %>%
   filter(alpha %in% c("TRUE", "FALSE")) %>%
   tidylog::inner_join(parameter_choices) %>%
-  tidylog::left_join(trans_families) %>%
+  tidylog::left_join(trans_families) 
+
+
+correl_dat <- dat %>%
   group_by(simulator) %>%
   summarize(ARI_cor = cor(mean_knn_overlap, ARI),
             AMI_cor = cor(mean_knn_overlap, AMI),
@@ -93,10 +97,7 @@ correl_dat <- res %>%
          AMI_cor_label = paste0("$r=", sprintf("%.2f", AMI_cor), "$"))
 
 
- ari_trend_pl <- res %>%
-  filter(alpha %in% c("TRUE", "FALSE")) %>%
-  tidylog::inner_join(parameter_choices) %>%
-  tidylog::left_join(trans_families) %>%
+ ari_trend_pl <- dat %>%
   ggplot(aes(x = mean_knn_overlap, y = ARI)) +
     geom_vline(data = . %>% group_by(simulator) %>% summarize(mean = mean(mean_knn_overlap)), aes(xintercept = mean), size = 0.3, linetype = 2) +
     geom_hline(data = . %>% group_by(simulator) %>% summarize(mean = mean(ARI)), aes(yintercept = mean), size = 0.3, linetype = 2) +
@@ -115,10 +116,7 @@ correl_dat <- res %>%
 
 
 
-ami_trend_pl <- res %>%
-  filter(alpha %in% c("TRUE", "FALSE")) %>%
-  tidylog::inner_join(parameter_choices) %>%
-  tidylog::left_join(trans_families) %>%
+ami_trend_pl <- dat %>%
   ggplot(aes(x = mean_knn_overlap, y = AMI)) +
     geom_vline(data = . %>% group_by(simulator) %>% summarize(mean = mean(mean_knn_overlap)), aes(xintercept = mean), size = 0.3, linetype = 2) +
     geom_hline(data = . %>% group_by(simulator) %>% summarize(mean = mean(AMI)), aes(yintercept = mean), size = 0.3, linetype = 2) +
