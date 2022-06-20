@@ -1,0 +1,15 @@
+.floating_gear_holder{
+  position: relative;
+}
+.floating_gear_holder .floating_gear{
+  visibility: hidden;
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1;
+}
+.floating_gear_holder:hover .floating_gear{
+  visibility: visible; 
+}
+
+

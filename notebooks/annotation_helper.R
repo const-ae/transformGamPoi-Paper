@@ -38,4 +38,8 @@ dataset_labels <- c(dyngen = "Dyngen", linear_walk = "Linear Walk", muscat = "mu
                     GSE130931 = "GSE130931", GSE142647 = "GSE142647", GSE150068 = "GSE150068", GSE158941 = "GSE158941", GSE163505 = "GSE163505",
                     GSE164017 = "GSE164017", GSE178765 = "GSE178765", GSE179714 = "GSE179714", GSE179831 = "GSE179831", GSE184806 = "GSE184806")
 
-
+dataset_benchmark <- c(dyngen = "simulation", linear_walk = "simulation", muscat = "simulation", random_walk = "simulation", scDesign2 = "simulation",
+                       smartSeq3_fibroblasts = "downsampling", smartSeq3_fibroblasts_alt = "downsampling", 
+                       smartSeq3_hek = "downsampling", smartSeq3_siRNA_knockdown = "downsampling", mcSCRB = "downsampling",
+                       GSE130931 = "consistency", GSE142647 = "consistency", GSE150068 = "consistency", GSE158941 = "consistency", GSE163505 = "consistency",
+                       GSE164017 = "consistency", GSE178765 = "consistency", GSE179714 = "consistency", GSE179831 = "consistency", GSE184806 = "consistency")
