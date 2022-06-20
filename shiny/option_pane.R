@@ -73,8 +73,8 @@ optionPaneServer <- function(id, data, metric = overlap, pca_sel_init = 50, knn_
       group_map(~ set_names(list(c(paste0("All ", .y),unique(.x$dataset))), .y)) %>%
       purrr::flatten() %>%
       shinyWidgets::updatePickerInput(session, "dataset_sel", choices = ., selected = dataset_sel_init)
-    shinyWidgets::updateSliderTextInput(session, "knn_sel", choices = knn_sel_init, selected = knn_sel_init)
-    shinyWidgets::updateSliderTextInput(session, "global_pca_sel", choices = pca_sel_init, selected = pca_sel_init)
+    shinyWidgets::updateSliderTextInput(session, "knn_sel", choices = c(0, knn_sel_init), selected = knn_sel_init)
+    shinyWidgets::updateSliderTextInput(session, "global_pca_sel", choices = c(0, knn_sel_init), selected = pca_sel_init)
     isolate(shinyWidgets::updateCheckboxGroupButtons(session, "alpha_sel", choices = as.character(alpha_sel_init), selected = alpha_sel_init))
     # shinyWidgets::updateCheckboxGroupButtons(session, "alpha_sel", choices = c("TRUE", "FALSE")) # This is somehow broken...
     
@@ -107,32 +107,23 @@ optionPaneServer <- function(id, data, metric = overlap, pca_sel_init = 50, knn_
     # Update detailed PCA selection plot
     filtered_dat <- reactive({
       filtered_dat <- data_sel_data()
-      filtered_dat <- filter(filtered_dat, alpha %in% input$alpha_sel)
+      if(! is.null(input$alpha_sel)) filtered_dat <- filter(filtered_dat, alpha %in% input$alpha_sel)
       if(! is.null(input$knn_sel)) filtered_dat <- filter(filtered_dat, knn ==  input$knn_sel)
       filtered_dat
     })
       
-    show_relative_overlap <- reactive(FALSE)
-    
     output$pcaplot <- renderPlot({
       if(nrow(filtered_dat()) > 0){
-        if(show_relative_overlap()){
-          res %>%
-            mutate(knn_recovery = overlap / knn) %>%
-            group_by(dataset, replicate, pca_dim, knn) %>%
-            mutate(knn_recovery = knn_recovery / mean(knn_recovery)) 
-        }else{
-          filtered_dat() %>%
-            group_by(dataset, pca_dim, knn, transformation, alpha) %>%
-            summarize({{metric}} := mean({{metric}})) %>%
-            ggplot(aes(x = pca_dim, y = {{metric}})) +
-              geom_line(aes(group = paste0(transformation, "-", alpha))) +
-              scale_x_log10() +
-              ggh4x::facet_wrap2(vars(dataset), ncol = 5, drop = TRUE) +
-              (if(! is.null(pca_sel())) geom_vline(data = enframe(pca_sel(), name = "dataset") %>% 
-                                                     filter(dataset %in% unique(filtered_dat()$dataset)), 
-                                                   aes(xintercept = value))) 
-        }
+        filtered_dat() %>%
+          group_by(dataset, pca_dim, knn, transformation, alpha) %>%
+          summarize({{metric}} := mean({{metric}})) %>%
+          ggplot(aes(x = pca_dim, y = {{metric}})) +
+            geom_line(aes(group = paste0(transformation, "-", alpha))) +
+            scale_x_log10() +
+            ggh4x::facet_wrap2(vars(dataset), ncol = 5, drop = TRUE, scales = if(input$zoom_in) "free" else "fixed") +
+            (if(! is.null(pca_sel())) geom_vline(data = enframe(pca_sel(), name = "dataset") %>% 
+                                                   filter(dataset %in% unique(filtered_dat()$dataset)), 
+                                                 aes(xintercept = value))) 
       }
     }, res = 96)
     
