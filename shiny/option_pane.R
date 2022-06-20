@@ -29,27 +29,34 @@ filter_data_with_pca_sel <- function(data, pcadim_sel, dataset_var = dataset){
 
 optionPaneUI <- function(id, show_pcadim_selector = TRUE, show_detailed_pcadim_selector = TRUE, 
                          show_knn_selector = TRUE, show_alpha_selector = TRUE, show_dataset_selector = TRUE) {
-  tagList(
+  res <- tagList(
     dataset_selector = if(show_dataset_selector) shinyWidgets::pickerInput(NS(id, "dataset_sel"), "Dataset", choices = NA),
     alpha_selector = if(show_alpha_selector) shinyWidgets::checkboxGroupButtons(NS(id, "alpha_sel"), "Overdispersion", choices = c("TRUE", "0", "0.05"), selected = c("TRUE", "0")),
     knn_selector = if(show_knn_selector) shinyWidgets::sliderTextInput(NS(id, "knn_sel"), "k-NN", choices = NA, grid = TRUE),
     pcadim_selector = if(show_pcadim_selector){
-      slider <- shinyWidgets::sliderTextInput(NS(id, "global_pca_sel"), "PCA", choices = NA, grid = TRUE)
       if(show_detailed_pcadim_selector){
         random_id <- paste0(sample(letters[1:6], replace = TRUE, size = 8), collapse = "")
-        detail_view <- div(div_with_floating_gear(
-          shinycssloaders::withSpinner(plotOutput(NS(id, "pcaplot"), click = NS(id, "pcaplot_click")), 4, hide.ui = FALSE),
-          menu_content = shinyWidgets::awesomeCheckbox(NS(id, "zoom_in"), "zoom in")
-        ), id = paste0("collapse_", random_id), class="collapse")
-        collapse_button <- a(class = "btn bn-primary", role="button", `data-toggle`="collapse",
+        collapse_button <- a(class = "", role="button", `data-toggle`="collapse",
                              href= paste0("#collapse_", random_id), `aria-expanded`="false", 
-                             `aria-controls`=paste0("collapse_", random_id), "Detailed Selection")
-        div(fluidRow(column(4, slider), column(1, collapse_button)), detail_view)
+                             `aria-controls`=paste0("collapse_", random_id), "Details")
+        shinyWidgets::sliderTextInput(NS(id, "global_pca_sel"), div("PCA (", collapse_button, ")"), choices = NA, grid = TRUE)
       }else{
-        slider
+        shinyWidgets::sliderTextInput(NS(id, "global_pca_sel"), "PCA", choices = NA, grid = TRUE)
       }
     }
-  )
+  ) %>%
+    purrr::discard(~ is.null(.x)) %>%
+    purrr::map(~ column(3, .x))
+  
+  if(show_detailed_pcadim_selector){
+    detail_view <- div(div_with_floating_gear(
+      shinycssloaders::withSpinner(plotOutput(NS(id, "pcaplot"), click = NS(id, "pcaplot_click")), 4, hide.ui = FALSE),
+      menu_content = shinyWidgets::awesomeCheckbox(NS(id, "zoom_in"), "zoom in")
+    ), id = paste0("collapse_", random_id), class="collapse")
+    tagList(fluidRow(res), detail_view)
+  }else{
+    fluidRow(res)
+  }
 }
 
 
