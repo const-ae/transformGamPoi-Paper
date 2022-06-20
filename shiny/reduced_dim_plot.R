@@ -5,11 +5,11 @@ reducedDimPlotUI <- function(id) {
   tagList(
     div_with_floating_gear(
       shinycssloaders::withSpinner(plotOutput(NS(id, "reduced_dim_plot")), 4, hide.ui = FALSE),
-      menu_content = shinyWidgets::awesomeCheckbox(NS(id, "zoom_in"), "zoom in")
+      menu_content = div()
     ),
-    shinyWidgets::pickerInput(inputId = NS(id, "dataset"), label = "Dataset", choices = ""),
-    shinyWidgets::switchInput(inputId = NS(id, "show_tsne"), label = "Dimension Reduction", onLabel = "tSNE", offLabel = "PCA"),
-    shinyWidgets::switchInput(inputId = NS(id, "color_cluster"), label = "Color by", onLabel = "cluster", offLabel = "Seq. Depth"),
+    fluidRow(column(3, shinyWidgets::pickerInput(inputId = NS(id, "dataset"), label = "Dataset", choices = "")),
+             column(3, shinyWidgets::switchInput(inputId = NS(id, "show_tsne"), label = "Dimen. Red.", onLabel = "tSNE", offLabel = "PCA", inline = TRUE)),
+             column(3, shinyWidgets::switchInput(inputId = NS(id, "color_cluster"), label = "Color by", onLabel = "cluster", offLabel = "Seq. Depth")))
   )
 }
 
@@ -22,7 +22,11 @@ reducedDimPlotServer <- function(id, data) {
   
   
   moduleServer(id, function(input, output, session) {
-    shinyWidgets::updatePickerInput(session, "dataset", choices = sort(unique(data$dataset)))
+    data %>%
+      group_by(benchmark) %>%
+      group_map(~ set_names(list(unique(.x$dataset)), .y)) %>%
+      flatten() %>%
+      shinyWidgets::updatePickerInput(session, "dataset", choices = .)
     
     filtered_dat <- reactive({
       req(input$dataset)
