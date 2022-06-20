@@ -89,7 +89,7 @@ optionPaneServer <- function(id, data, metric = overlap, pca_sel_init = 50, knn_
     pca_sel <- reactiveVal(deframe(data.frame(datasets, pca_sel_init)))
     observeEvent(input$pcaplot_click, {
       vals <- pca_sel()
-      vals[input$pcaplot_click$panelvar1] <- pca_steps[which.min(abs(pca_steps - input$pcaplot_click$x))]
+      vals[input$pcaplot_click$panelvar1[[1]]] <- pca_steps[which.min(abs(pca_steps - input$pcaplot_click$x))]
       pca_sel(vals)
     }, ignoreNULL = TRUE)
     
