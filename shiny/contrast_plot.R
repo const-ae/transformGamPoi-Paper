@@ -128,4 +128,4 @@ contrastPlotApp <- function() {
   }
   shinyApp(ui, server)  
 }
-contrastPlotApp()
+# contrastPlotApp()

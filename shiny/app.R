@@ -17,26 +17,64 @@ res <- bind_rows(
   mutate(transformation = factor(transformation, levels = trans_families$transformation)) %>%
   mutate(alpha = ifelse(alpha == "FALSE", "0", alpha))
 
-div_with_floating_gear <- function(panel, menu_content){
-  div(class = "floating_gear_holder",
-      div(class = "floating_gear", shinyWidgets::dropdownButton(menu_content, icon = icon("gear"), size = "sm", right = TRUE)),
-      panel)
-}
+tmp <- read_rds("../benchmark/output/benchmark_results/dataset_plot_data.RDS")
+reduced_dim_data <- bind_rows(
+  bind_rows(tmp$downsampling) %>%
+    pivot_longer(-c(name, cluster, col_sums_full, col_sums_reduced), names_pattern = "(tsne|pca)_(ground_truth|log_counts)_(full|reduced)_(axis\\d)", names_to = c("dim_red_method", "origin", "downsampling", ".value")) %>%
+    pivot_longer(c(col_sums_full, col_sums_reduced), names_pattern = "(.+)_(full|reduced)", names_to = c(".value", "downsampling2")) %>%
+    filter(downsampling == downsampling2) %>% 
+    dplyr::select(-downsampling2)%>%
+    dplyr::rename(dataset = name),
+  bind_rows(tmp$consistency) %>%
+    pivot_longer(-c(name, cluster, col_sums), names_pattern = "(tsne|pca)_(ground_truth|log_counts)_(axis\\d)", names_to = c("dim_red_method", "origin", ".value")) %>%
+    dplyr::rename(dataset = name),
+  bind_rows(tmp$simulation) %>%
+    pivot_longer(-c(simulator, cluster, col_sums), names_pattern = "(tsne|pca)_(ground_truth|log_counts)_(axis\\d)", names_to = c("dim_red_method", "origin", ".value")) %>%
+    dplyr::rename(dataset = simulator)
+) %>%
+  left_join(enframe(dataset_benchmark, name = "dataset", value = "benchmark"))
 
+
+
+source("utils.R")
 source("option_pane.R")
-
-cons_res <- filter(res, benchmark == "consistency") %>%
-  group_by(dataset, transformation, knn, pca_dim, alpha) %>%
-  summarize(overlap = mean(overlap))
+source("benchmark_plot.R")
+source("duration_plot.R")
+source("contrast_plot.R")
+source("reduced_dim_plot.R")
 
 ui <- fluidPage(
   includeCSS("www/main.css"),
-  pcadimPlotUI("pca_sel"),
+  h1("Transformation and Preprocessing of Single-Cell RNA-Seq Data"),
+  h2("Online Supplementary Information"),
+  h3("Benchmark Results"),
+  benchmarkPlotUI("benchmark"),
+  optionPaneUI("benchmark_options"),
+  h3("Contrasts"),
+  contrastPlotUI("contrasts"),
+  optionPaneUI("contrast_options"),
+  h3("Computational Expenses"),
+  durationPlotUI("duration"),
+  optionPaneUI("duration_options", show_detailed_pcadim_selector = FALSE),
+  h3("Dataset Exploration"),
+  reducedDimPlotUI("reducedDimPlots")
 )
+
 server <- function(input, output, session) {
-  z <- pcadimPlotServer("pca_sel", data = cons_res, pca_sel = reactive(20))[[1]]
-  observeEvent(z(), {
-    print(paste0("The value of z has changed: ", z()))
-  })
+
+  op_bench <- optionPaneServer("benchmark_options", data = res)
+  benchmarkPlotServer("benchmark", data = res, pcadim_sel = op_bench$pca_sel,
+                      knn_sel = op_bench$knn_sel, alpha_sel = op_bench$alpha_sel, dataset_sel = op_bench$dataset_sel)
+  
+  op_contr <- optionPaneServer("contrast_options", data = res)
+  contrastPlotServer("contrasts", data = res, pcadim_sel = op_contr$pca_sel, 
+                      knn_sel = op_contr$knn_sel, dataset_sel = op_contr$dataset_sel)
+
+  op_dur <- optionPaneServer("duration_options", data = res)
+  durationPlotServer("duration", data = res, pcadim_sel = op_dur$pca_sel,
+                      knn_sel = op_dur$knn_sel, alpha_sel = op_dur$alpha_sel, dataset_sel = op_dur$dataset_sel)
+
+  reducedDimPlotServer("reducedDimPlots", data = reduced_dim_data)
+  
 }
 shinyApp(ui, server)

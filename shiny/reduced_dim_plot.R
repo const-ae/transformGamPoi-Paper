@@ -96,4 +96,4 @@ reducedDimPlotApp <- function() {
   }
   shinyApp(ui, server)  
 }
-reducedDimPlotApp()
+# reducedDimPlotApp()

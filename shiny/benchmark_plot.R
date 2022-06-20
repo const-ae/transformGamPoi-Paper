@@ -87,4 +87,4 @@ benchmarkPlotApp <- function() {
   }
   shinyApp(ui, server)  
 }
-benchmarkPlotApp()
+# benchmarkPlotApp()

@@ -107,4 +107,4 @@ durationPlotApp <- function() {
   }
   shinyApp(ui, server)  
 }
-durationPlotApp()
+# durationPlotApp()
