@@ -4,15 +4,30 @@
 
 contrastPlotUI <- function(id) {
   tagList(
-    shiny::fluidRow(
-      column(3, tagList(
-        shinyWidgets::pickerInput(NS(id, "trans_a"), label = "", choices = NA, inline = TRUE, width = "fit"),
-        shinyWidgets::pickerInput(NS(id, "alpha_a"), label = "alpha", choices = NA, inline = TRUE, width = "fit")
-      )),
-      column(1, p(" vs ")),
-      column(3,tagList(
-        shinyWidgets::pickerInput(NS(id, "trans_b"), label = "", choices = NA, inline = TRUE, width = "fit"),
-        shinyWidgets::pickerInput(NS(id, "alpha_b"), label = "alpha", choices = NA, inline = TRUE, width = "fit")
+    # shiny::fluidRow(
+    #   column(3, tagList(
+    #     shinyWidgets::pickerInput(NS(id, "trans_a"), label = "", choices = NA, inline = TRUE, width = "fit"),
+    #     shinyWidgets::pickerInput(NS(id, "alpha_a"), label = "alpha", choices = NA, inline = TRUE, width = "fit")
+    #   )),
+    #   column(1, p(" vs ")),
+    #   column(3,tagList(
+    #     shinyWidgets::pickerInput(NS(id, "trans_b"), label = "", choices = NA, inline = TRUE, width = "fit"),
+    #     shinyWidgets::pickerInput(NS(id, "alpha_b"), label = "alpha", choices = NA, inline = TRUE, width = "fit")
+    #   ))
+    # ),
+    fluidRow(
+      column(8, offset = 2, h4(
+        div(shinyWidgets::pickerInput(NS(id, "trans_a"), label = "", choices = NA, inline = TRUE, 
+                                  width = "fit"), class = "inline-transformation-picker"), 
+        "(α=", 
+        div(shinyWidgets::pickerInput(NS(id, "alpha_a"), label = "", choices = NA, inline = TRUE, width = "fit"), class = "inline-transformation-picker"),
+        ")",
+        p(" vs ", style = "display: inline;"),
+        div(shinyWidgets::pickerInput(NS(id, "trans_b"), label = "", choices = NA, inline = TRUE, 
+                                  width = "fit"), class = "inline-transformation-picker"),
+        "(α=", 
+        div(shinyWidgets::pickerInput(NS(id, "alpha_b"), label = "", choices = NA, inline = TRUE, width = "fit"), class = "inline-transformation-picker"),
+        ")"
       ))
     ),
     div_with_floating_gear(

@@ -13,3 +13,13 @@
 }
 
 
+.inline-transformation-picker {
+  display: inline;
+}
+
+.inline-transformation-picker button{
+  border-width: 0px;
+  padding-right: 2px;
+  padding-left: 2px;
+}
+
