@@ -82,7 +82,8 @@ benchmarkPlotApp <- function() {
   )
   server <- function(input, output, session) {
     op <- optionPaneServer("consistency_pca_sel", data = res, metric = overlap, knn_sel = 50, pca_sel = 50)
-    cons_bench <- benchmarkPlotServer("consistency_benchmark", data = res, pcadim_sel = op$pca_sel, knn_sel = op$knn_sel, alpha_sel = op$alpha_sel, dataset_sel = op$dataset_sel)
+    benchmarkPlotServer("consistency_benchmark", data = res, pcadim_sel = op$pca_sel, 
+                        knn_sel = op$knn_sel, alpha_sel = op$alpha_sel, dataset_sel = op$dataset_sel)
   }
   shinyApp(ui, server)  
 }
