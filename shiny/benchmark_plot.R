@@ -47,12 +47,14 @@ benchmarkPlotServer <- function(id, data, metric = overlap, pcadim_sel = reactiv
           ggbeeswarm::geom_quasirandom(color = "grey", size = 0.3, alpha = 0.7, groupOnX = FALSE) +
           stat_summary(geom = "point", position = position_dodge2(width = 0.3), fun.data = mean_cl_boot, size = 1.8) +
           scale_y_grouped_discrete(grouping = ~ trans_families_labels[deframe(trans_families)[.x]], gap_size = 1.7, limits = rev,
-                                   labels = trans_labels, add_group_label = TRUE) +
+                                   labels = trans_labels_plain, add_group_label = TRUE) +
           scale_color_manual(values = trans_families_colors, labels = trans_families_labels, guide = "none") +
           (if(input$zoom_in) scale_x_continuous(limits = range(pull(dat, {{metric}})))
            else scale_x_continuous(limits = c(min(0.2, pull(dat, {{metric}})), max(1.8, pull(dat, {{metric}}))),
                                    breaks = c(0.5, 1.0, 1.5))) +
-          labs(y = "", x = "Relative k-NN Overlap", shape = "Overdispersion")
+          labs(y = "", x = "Relative k-NN Overlap", shape = "Overdispersion")+
+          theme_grouped_axis(axis.grouping.line_padding = unit(5, "points"))
+        
       }else{
         dat <- filtered_dat()  %>%
           left_join(trans_families, by = "transformation")
@@ -61,11 +63,12 @@ benchmarkPlotServer <- function(id, data, metric = overlap, pcadim_sel = reactiv
           ggbeeswarm::geom_quasirandom(color = "grey", size = 0.3, alpha = 0.7, groupOnX = FALSE) +
           stat_summary(geom = "point", position = position_dodge2(width = 0.3), fun.data = mean_cl_boot, size = 1.8) +
           scale_y_grouped_discrete(grouping = ~ trans_families_labels[deframe(trans_families)[.x]], gap_size = 1.7, limits = rev,
-                                   labels = trans_labels, add_group_label = TRUE) +
+                                   labels = trans_labels_plain, add_group_label = TRUE) +
           scale_color_manual(values = trans_families_colors, labels = trans_families_labels, guide = "none") +
           (if(input$zoom_in) scale_x_continuous(limits = range(pull(dat, {{metric}})))
            else scale_x_continuous(limits = c(0, dat$knn[1])))+
-          labs(y = "", x = "k-NN Overlap", shape = "Overdispersion")
+          labs(y = "", x = "k-NN Overlap", shape = "Overdispersion") +
+          theme_grouped_axis(axis.grouping.line_padding = unit(5, "points"))
       }
     }, res = 96)
   })

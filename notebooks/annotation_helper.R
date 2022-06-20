@@ -26,6 +26,16 @@ trans_labels <- c("acosh" = r"($\textrm{acosh}(2\alpha y/s+1)$)", "logp_alpha" =
                   "sanity_map"="Sanity MAP", "sanity_dists" = "Sanity Distance", "dino" = "Dino", "normalisr_normvar" = "Normalisr",
                   "glmpca" = "GLM PCA", "newwave" = "NewWave")
 
+trans_labels_plain <- c("acosh" = "acosh(2αy/s+1)", "logp_alpha" = "log(y/s+1/(4α))", "logp_cpm" = "log(CPM + 1)",
+                  "logp1" = "log(y/s+1)", "logp1_hvg" = "log(y/s+1)->HVG", "logp1_hvg_zscore" = "log(y/s+1)->HVG->Z", 
+                  "logp1_zscore" = "log(y/s+1)->Z", "logp1_size_normed" = "log(y/s+1)",
+                  "pearson" = "Pearson (no clip)", "pearson_analytic" = "Analytic Pearson", "pearson_clip" = "Pearson",
+                  "rand_quantile" = "Random Quantile", "sctransform" = "sctransform",
+                  "pearson_clip_hvg" = r"(Pearson->HVG)", "pearson_clip_hvg_zscore" = r"(Pearson->HVG->Z)", 
+                  "pearson_clip_zscore"= r"(Pearson->Z)",
+                  "sanity_map"="Sanity MAP", "sanity_dists" = "Sanity Distance", "dino" = "Dino", "normalisr_normvar" = "Normalisr",
+                  "glmpca" = "GLM PCA", "newwave" = "NewWave")
+
 trans_families$transformation <- factor(trans_families$transformation, levels = trans_families$transformation)
 
 trans_families_labels <- factor(c(delta_method = "Delta Method", glm_residual = "GLM Residuals", latent_expr = "Lat. Expr.", count_model = "Count"), levels = c("Count", "Lat. Expr.", "GLM Residuals", "Delta Method"))

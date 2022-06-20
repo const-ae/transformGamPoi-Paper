@@ -57,10 +57,11 @@ durationPlotServer <- function(id, data, pcadim_sel = reactive(NULL), knn_sel = 
           ggbeeswarm::geom_quasirandom(color = "grey", size = 0.3, alpha = 0.7, groupOnX = FALSE) +
           stat_summary(geom = "point", position = position_dodge2(width = 0.3), fun.data = mean_cl_boot, size = 1.8) +
           scale_y_grouped_discrete(grouping = ~ trans_families_labels[deframe(trans_families)[.x]], gap_size = 1.7, limits = rev,
-                                   labels = trans_labels, add_group_label = TRUE) +
+                                   labels = trans_labels_plain, add_group_label = TRUE) +
           scale_color_manual(values = trans_families_colors, labels = trans_families_labels, guide = "none") +
           scale_x_log10() +
-          labs(y = "", x = paste0("Relative ", label), shape = "Overdispersion")
+          labs(y = "", x = paste0("Relative ", label), shape = "Overdispersion")+
+          theme_grouped_axis(axis.grouping.line_padding = unit(5, "points"))
       }else{
         time_minor_ticks <- tibble(ticks = c(seq(0, 60, by = 10), # seconds
                                              seq(0, 60 * 60, by = 10 * 60), # 10 minutes
@@ -78,14 +79,15 @@ durationPlotServer <- function(id, data, pcadim_sel = reactive(NULL), knn_sel = 
           ggbeeswarm::geom_quasirandom(aes(shape = alpha), color = "grey", size = 0.3, alpha = 0.7, groupOnX = FALSE) +
           stat_summary(aes(shape = alpha), geom = "point", position = position_dodge2(width = 0.3), fun.data = mean_cl_boot, size = 1.8) +
           scale_y_grouped_discrete(grouping = ~ trans_families_labels[deframe(trans_families)[.x]], gap_size = 1.7, limits = rev,
-                                   labels = trans_labels, add_group_label = TRUE) +
+                                   labels = trans_labels_plain, add_group_label = TRUE) +
           scale_color_manual(values = trans_families_colors, labels = trans_families_labels, guide = "none") +
           geom_rug(data = time_minor_ticks, aes(x = ticks, y = 0), sides = "b", color = "black") +
           geom_rug(data = time_major_ticks, aes(x = ticks, y = 0), sides = "b", color = "black") +
           scale_x_log10(breaks = c(0.001, 1, 60, 60 * 60, 24 * 60 * 60, 7 * 24 * 60 * 60),
                         labels = c("1ms", "1sec", "1min", "1hour", "1day", "1week"), limits = c(1, NA),
                         expand = expansion(mult = 0.01, 0.05)) +
-          labs(y = "", x = label, shape = "Overdispersion")
+          labs(y = "", x = label, shape = "Overdispersion")+
+          theme_grouped_axis(axis.grouping.line_padding = unit(5, "points"))
       }
     }, res = 96)
   })

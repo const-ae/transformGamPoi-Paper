@@ -5,6 +5,7 @@ library(zeallot)
 source("../notebooks/utils.R")
 source("../notebooks/annotation_helper.R")
 
+theme_set(cowplot::theme_cowplot(font_size = 11))
 
 res <- bind_rows(
   read_tsv("../benchmark/output/benchmark_results/simulation_results.tsv") %>% 
