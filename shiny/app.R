@@ -16,7 +16,8 @@ res <- bind_rows(
     transmute(benchmark = "downsampling", overlap = overlap, knn, pca_dim, alpha = as.character(alpha), transformation, dataset, replicate = seed, cputime_sec = full_cputime_sec, elapsed_sec = full_elapsed_sec)
 ) %>%
   mutate(transformation = factor(transformation, levels = trans_families$transformation)) %>%
-  mutate(alpha = ifelse(alpha == "FALSE", "0", alpha))
+  mutate(alpha = ifelse(alpha == "FALSE", "0", alpha)) %>%
+  mutate(dataset = dataset_labels[dataset])
 
 tmp <- read_rds("../benchmark/output/benchmark_results/dataset_plot_data.RDS")
 reduced_dim_data <- bind_rows(
@@ -33,7 +34,8 @@ reduced_dim_data <- bind_rows(
     pivot_longer(-c(simulator, cluster, col_sums), names_pattern = "(tsne|pca)_(ground_truth|log_counts)_(axis\\d)", names_to = c("dim_red_method", "origin", ".value")) %>%
     dplyr::rename(dataset = simulator)
 ) %>%
-  left_join(enframe(dataset_benchmark, name = "dataset", value = "benchmark"))
+  left_join(enframe(dataset_benchmark, name = "dataset", value = "benchmark")) %>%
+  mutate(dataset = dataset_labels[dataset])
 
 
 

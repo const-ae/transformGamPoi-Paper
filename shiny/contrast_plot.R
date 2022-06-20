@@ -49,8 +49,9 @@ contrastPlotServer <- function(id, data, metric = overlap, pcadim_sel = reactive
   stopifnot(is.reactive(dataset_sel))
   
   trans_choices <- trans_families %>%
+    left_join(enframe(trans_labels_plain, name = "transformation")) %>%
     group_by(family) %>%
-    group_map(~ set_names(list(as.character(.x$transformation)), .y)) %>%
+    group_map(~ set_names(list(deframe(.x[,c("value", "transformation")])), .y)) %>%
     flatten() 
   
   moduleServer(id, function(input, output, session) {

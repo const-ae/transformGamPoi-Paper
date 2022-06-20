@@ -22,4 +22,7 @@
   padding-right: 2px;
   padding-left: 2px;
 }
+.inline-transformation-picker .filter-option-inner{
+  font-size: 18px;
+}
 
