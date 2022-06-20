@@ -55,7 +55,7 @@ ui <- fluidPage(
   optionPaneUI("benchmark_options"),
   h3("Contrasts"),
   contrastPlotUI("contrasts"),
-  optionPaneUI("contrast_options"),
+  optionPaneUI("contrast_options", show_alpha_selector = FALSE),
   h3("Computational Expenses"),
   durationPlotUI("duration"),
   optionPaneUI("duration_options", show_detailed_pcadim_selector = FALSE),
