@@ -289,11 +289,15 @@ for(dataset_name in ci$input_data$dataset){
       for(knn in ci$knn_construction$knn){
         for(trans in ci$knn_construction$transformations){
           for(a in trans$alpha){
-            knn_constr <- transform_consistency_data(trans$name, dataset, pca_dim = pca_dim, knn = knn, alpha = a, seed = seed)
-            consistency_metric <- calculate_10X_consistency(knn_constr,
-                                                            dataset = dataset_name, seed = seed, pca_dim = pca_dim,
-                                                            knn = knn, transformation = trans$name, alpha = a)
-            consistency_jobs <- append(consistency_jobs, list(consistency_metric))
+            if(trans$name == "newwave" && dataset_name == "GSE184806" && pca_dim >  50){
+              # Skip (newwave doesn't handle large pca_dim well)              
+            }else{
+              knn_constr <- transform_consistency_data(trans$name, dataset, pca_dim = pca_dim, knn = knn, alpha = a, seed = seed)
+              consistency_metric <- calculate_10X_consistency(knn_constr,
+                                                              dataset = dataset_name, seed = seed, pca_dim = pca_dim,
+                                                              knn = knn, transformation = trans$name, alpha = a)
+              consistency_jobs <- append(consistency_jobs, list(consistency_metric))
+            }
           }
         }
       }
