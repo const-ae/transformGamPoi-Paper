@@ -178,6 +178,12 @@ res_full_bench <- res %>%
   tidylog::inner_join(parameter_choices)  %>%
   tidylog::left_join(trans_families)
 
+dataset_labels_mod <- enframe(dataset_labels, name = "dataset", value = "label") %>%
+  left_join(parameter_choices, by = "dataset") %>%
+  mutate(label = paste0(label, " (\\#PCs=", pca_dim, ")")) %>%
+  dplyr::select(dataset, label) %>%
+  deframe()
+
 make_main_suppl_plot_panels <- function(data, add_group_label = FALSE){
   ggplot(data, aes(x = overlap, y = transformation, color = family)) +
     geom_vline(data = . %>% group_by(dataset) %>% summarize(mean = mean(overlap)), aes(xintercept = mean), size = 0.3, linetype = 2) +
@@ -187,7 +193,7 @@ make_main_suppl_plot_panels <- function(data, add_group_label = FALSE){
                              labels = trans_labels, add_group_label = add_group_label, guide = if(add_group_label) guide_grouped_axis() else guide_axis()) +
     scale_x_continuous(limits = c(0, NA), expand = expansion(mult = c(0, 0.2))) +
     scale_color_manual(values = trans_families_colors, labels = trans_families_labels, guide = "none") +
-    facet_wrap(vars(dataset), ncol = 5, scales = "free_x", labeller = labeller(dataset = dataset_labels)) +
+    facet_wrap(vars(dataset), ncol = 5, scales = "free_x", labeller = labeller(dataset = dataset_labels_mod)) +
     theme_grouped_axis(axis.grouping.line_padding = unit(5, "pt"), axis.grouping.line_height = unit(10, "pt"), axis.grouping.label.y = element_text(size = font_size_small, angle = 90)) +
     theme(axis.title.y = element_blank(),  plot.title.position = "plot", axis.text.x = element_text(size = font_size_tiny), strip.background = element_blank()) 
 }
