@@ -181,3 +181,10 @@ cowplot::plot_grid(plotlist = tsne_plots, nrow = 4, align = "vh", rel_heights = 
 save_plot("../output/suppl-tsne_datasets.pdf", last_plot(), width = 150, height = 180, units = "mm", latex_support = TRUE)
 ```
 
+
+
+# Session Info
+
+```{r}
+sessionInfo()
+```

@@ -37,7 +37,7 @@ overdisp <- glmGamPoi::glm_gp(sce, overdispersion = "global", overdispersion_shr
 ```{r}
 transformed_dat <- list()
 for(trans in names(all_transformations)){
-  if(trans == "sanity_dists"){
+  if(trans %in% c("sanity_dists", "newwave", "glmpca")){
     print(paste0("Skip: ", trans))
   }else{
     print(paste0("Applying: ", trans))
@@ -114,7 +114,8 @@ mean_var_plots <- mean_var_df %>%
          transformation_labelled = factor(as.character(c(trans_labels, raw = "Raw")[as.character(transformation2)]), 
                                           levels = as.character(c(trans_labels, raw = "Raw")[c(levels(trans_families$transformation), "raw")]))) %>% 
   left_join(add_row(trans_families, transformation = "raw", family = "raw")) %>%
-  mutate(family = factor(family, levels = c("raw", "delta_method", "glm_residual", "latent_expr"))) %>%
+  mutate(family = factor(family, levels = c("raw", "delta_method", "glm_residual", "latent_expr", "count_model"))) %>%
+  mutate(family = droplevels(family)) %>%
   left_join(limits) %>%
   mutate(gene_var = ifelse(gene_var > ceiling, Inf, gene_var)) %>%
   group_by(family) %>%

@@ -305,6 +305,12 @@ plot_assemble(
 
 
 
+# Session Info
+
+```{r}
+sessionInfo()
+```
+
 
 
 

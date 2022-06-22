@@ -82,7 +82,7 @@ overdisp <- glmGamPoi::glm_gp(subset_sce, overdispersion = "global", overdispers
 ```{r}
 transformed_dat <- list()
 for(trans in names(all_transformations)){
-  if(trans == "sanity_dists"){
+  if(trans %in% c("sanity_dists", "newwave", "glmpca")){
     print(paste0("Skip: ", trans))
   }else{
     print(paste0("Applying: ", trans))
@@ -158,7 +158,8 @@ pl_list <- res %>%
        transformation_labelled = factor(as.character(c(trans_labels, raw = "Raw")[as.character(transformation2)]), 
                                         levels = as.character(c(trans_labels, raw = "Raw")[c(levels(trans_families$transformation), "raw")]))) %>% 
   left_join(add_row(trans_families, transformation = "raw", family = "raw")) %>%
-  mutate(family = factor(family, levels = c("raw", "delta_method", "glm_residual", "latent_expr"))) %>%
+  mutate(family = factor(family, levels = c("raw", "delta_method", "glm_residual", "latent_expr", "count_model"))) %>%
+  mutate(family = droplevels(family)) %>%
   group_by(family) %>%
   group_map(function(dat, key){
     cat <- key[[1]][1]
