@@ -279,9 +279,12 @@ pca_pl_10X <- pca_dat %>%
 
 
 ```{r}
-plot_assemble(annotate_text("(A) Consistency", x = 2, y =1, vjust = 1, fontsize = font_size, fontface = "bold"),
-              annotate_text("(B) Simulation", x = 62, y = 1, vjust = 1, fontsize = font_size, fontface = "bold"),
-              annotate_text("(C) Downsampling", x = 122, y = 1, vjust = 1, fontsize = font_size, fontface = "bold"),
+plot_assemble(annotate_text("(A)", x = 2, y =1, vjust = 1, fontsize = font_size, fontface = "bold"),
+              annotate_text("Consistency", x = 21, y =1, vjust = 1, fontsize = font_size, fontface = "bold"),
+              annotate_text("(B)", x = 62, y = 1, vjust = 1, fontsize = font_size, fontface = "bold"),
+              annotate_text("Simulation", x = 82, y = 1, vjust = 1, fontsize = font_size, fontface = "bold"),
+              annotate_text("(C)", x = 122, y = 1, vjust = 1, fontsize = font_size, fontface = "bold"),
+              annotate_text("Downsampling", x = 137, y = 1, vjust = 1, fontsize = font_size, fontface = "bold"),
               annotate_graphic("../illustrations/benchmark_overviewArtboard 1.pdf", x = 32,  y = 104, units = "mm"),
               annotate_graphic("../illustrations/benchmark_overviewArtboard 3.pdf", x = 92,  y = 104, units = "mm"),
               annotate_graphic("../illustrations/benchmark_overviewArtboard 2.pdf", x = 152, y = 104, units = "mm"),
