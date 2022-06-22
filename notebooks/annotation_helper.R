@@ -28,7 +28,7 @@ trans_labels <- c("acosh" = r"($\textrm{acosh}(2\alpha y/s+1)$)", "logp_alpha" =
 
 trans_labels_plain <- c("acosh" = "acosh(2αy/s+1)", "logp_alpha" = "log(y/s+1/(4α))", "logp_cpm" = "log(CPM + 1)",
                   "logp1" = "log(y/s+1)", "logp1_hvg" = "log(y/s+1)->HVG", "logp1_hvg_zscore" = "log(y/s+1)->HVG->Z", 
-                  "logp1_zscore" = "log(y/s+1)->Z", "logp1_size_normed" = "log(y/s+1)",
+                  "logp1_zscore" = "log(y/s+1)->Z", "logp1_size_normed" = "log(y/s+1)/u",
                   "pearson" = "Pearson (no clip)", "pearson_analytic" = "Analytic Pearson", "pearson_clip" = "Pearson",
                   "rand_quantile" = "Random Quantile", "sctransform" = "sctransform",
                   "pearson_clip_hvg" = r"(Pearson->HVG)", "pearson_clip_hvg_zscore" = r"(Pearson->HVG->Z)", 
