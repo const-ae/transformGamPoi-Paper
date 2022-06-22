@@ -274,14 +274,14 @@ plot_assemble(
   annotate_text(r"($M \sim \textrm{LogNormal}(\mu, \sigma^2)$)", x = 22.5 + 45 * 3 - 2 + 3.2, y = 8 + 4.5, fontsize = font_size, vjust = 0.5, hjust = 0.5),
   
   # Size factor influence on PCA
-  annotate_text("(A) Confounding between size factors and PCA embedding of droplets encapsulating identical RNA", 
+  annotate_text("(A) Confounding effect of size factors on PCA embedding of droplets encapsulating a homogeneous RNA solution", 
                 x = 1, y = header_height + 2, fontsize = font_size, fontface = "bold", vjust = 1),
   list(plot = size_factor_dep_plots[[1]], x = 45 * 0, y = header_height + title_gap, width = 45, height = sf_panel_height),
   list(plot = size_factor_dep_plots[[2]], x = 45 * 1, y = header_height + title_gap, width = 45, height = sf_panel_height),
   list(plot = size_factor_dep_plots[[3]], x = 45 * 2, y = header_height + title_gap, width = 45, height = sf_panel_height),
   list(plot = size_factor_dep_plots[[4]], x = 45 * 3, y = header_height + title_gap, width = 45, height = sf_panel_height),
   # Mean Variance relation
-  annotate_text(paste0("(B) Mean-variance relation of values for ", 
+  annotate_text(paste0("(B) Mean-variance relation for ", 
                        prettyNum(n_genes, big.mark = "\\,"), " genes of the GSE130931 dataset"),
                 x = 1, y = header_height + title_gap + sf_panel_height + 2, fontsize = font_size, fontface = "bold", vjust = 1),
   list(plot = mean_var_plots[[1]], x = 45 * 0, y = header_height + title_gap * 2 + sf_panel_height, width = 45, height = mv_panel_height),
@@ -289,7 +289,7 @@ plot_assemble(
   list(plot = mean_var_plots[[3]], x = 45 * 2, y = header_height + title_gap * 2 + sf_panel_height, width = 45, height = mv_panel_height),
   list(plot = mean_var_plots[[4]], x = 45 * 3, y = header_height + title_gap * 2 + sf_panel_height, width = 45, height = mv_panel_height),
   # Bimodal gene stabilization
-  annotate_text(paste0("(C) Distribution of values for a single gene (Sftpc) with a bimodal expression pattern in lung epithelium"), 
+  annotate_text(paste0("(C) Distribution of a single gene (Sftpc) with a bimodal expression pattern in lung epithelium"), 
                 x = 1, y = header_height + title_gap * 2 + sf_panel_height + mv_panel_height + 2, fontsize = font_size, fontface = "bold", vjust = 1),
   list(plot = mouse_lung_pl[[1]], x = 45 * 0, y = header_height + title_gap * 3 + sf_panel_height + mv_panel_height, width = 45, height = his_panel_height),
   list(plot = mouse_lung_pl[[2]], x = 45 * 1, y = header_height + title_gap * 3 + sf_panel_height + mv_panel_height, width = 45, height = his_panel_height),
