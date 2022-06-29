@@ -74,7 +74,7 @@ consistency_pl <- res_main %>%
   filter(benchmark == "consistency") %>%
   make_main_plot_panel(add_group_label = TRUE) +
   labs(x = "Relative $k$-NN Overlap", 
-       subtitle = "10X gene subset A vs. gene subset B") +
+       subtitle = "10X gene subset 1 vs. gene subset 2") +
   NULL
 
 simulation_pl <- res_main %>%
@@ -201,7 +201,7 @@ make_main_suppl_plot_panels <- function(data, add_group_label = FALSE){
 con_suppl_pl <- res_full_bench %>%
   filter(benchmark == "consistency") %>%
   make_main_suppl_plot_panels(add_group_label = TRUE) +
-  labs(title = "(A) Consistency: 10X gene subset A vs. gene subset B", x = "$k$-NN Overlap")
+  labs(title = "(A) Consistency: 10X gene subset 1 vs. gene subset 2", x = "$k$-NN Overlap")
 
 sim_suppl_pl <- res_full_bench %>%
   filter(benchmark == "simulation") %>%
@@ -304,6 +304,20 @@ plot_assemble(annotate_text("(A)", x = 2, y =1, vjust = 1, fontsize = font_size,
 # Duration plots
 
 ```{r}
+res %>%
+  group_by(benchmark, dataset, replicate, knn, pca_dim) %>%
+  mutate(reference_cputime_sec = cputime_sec[which(transformation == "logp1")],
+         reference_elapsed_sec = elapsed_sec[which(transformation == "logp1")]) %>%
+  mutate(relative_cputime = cputime_sec / reference_cputime_sec,
+         relative_elapsed = elapsed_sec / reference_elapsed_sec)  %>%
+  ungroup() %>%
+  group_by(transformation, alpha) %>%
+  summarize(across(c(relative_cputime, relative_elapsed), .fns  = list(mean=mean, median=median, max=max, min=min)))
+```
+
+
+
+```{r}
 sel_dataset <- "GSE179831" 
 rel_scaling_factor_lin <- median(filter(res, transformation == "logp1", dataset == sel_dataset, pca_dim == 10, knn == 50)$cputime_sec)
 
@@ -357,6 +371,8 @@ res %>%
   )) %>%
   ggplot(aes(x = n_cells, y = cputime_sec)) +
     geom_point() +
+    geom_abline(intercept = 0, slope = 1) +
+    geom_abline(intercept = -3, slope = 2) +
     # geom_line(aes(color = highlight, group = transformation)) +
     geom_smooth(aes(color = highlight, group = transformation), method = "lm") +
     scale_x_log10() +
@@ -364,55 +380,23 @@ res %>%
 ```
 
 ```{r}
-# duration_dat <- res %>%
-#   # filter(alpha %in% c("TRUE", "FALSE")) %>%
-#   # filter(pca_dim == 10, knn == 50) %>%
-#   filter(knn == 50) %>%
-#   left_join(trans_families) %>%
-#   left_join(dataset_summaries %>% dplyr::select(-c(row_means, row_vars))) %>%
-#   mutate(highlight = case_when(
-#     transformation == "sanity_dists" ~ "sanity_dist",
-#     transformation == "sanity_map" ~ "sanity_map",
-#     transformation == "logp1_hvg" ~ "logp1_hvg",
-#     transformation == "pearson_analytic" ~ "pearson_analytic",
-#     transformation == "glmpca" ~ "glmpca",
-#     transformation == "dino" ~ "dino",
-#     TRUE ~ "other"
-#   )) %>%
-#   filter(highlight != "other") %>%
-#   filter(!is.na(cputime_sec)) %>%
-#   mutate(pca_dim = pmin(pca_dim, n_cells, n_genes))
-# 
-# fit <- lm(cputime_sec ~ transformation * (n_genes + I(n_genes^2) + poly(n_cells, 4) + poly(pca_dim, 4)) -1, data = duration_dat)
-# # fit <- lm(log(cputime_sec) ~ transformation * (poly(n_genes, 3) + poly(n_cells, 4) + poly(pca_dim, 4)) -1, data = duration_dat)
-# summary(fit)
-# 
-# predict_df <- duration_dat %>%
-#   dplyr::select(transformation, n_genes, n_cells, proportion_zeros) %>%
-#   mutate(cputime_sec = (predict(fit, newdata = duration_dat)))
-# 
-# resid_df <- bind_cols(duration_dat, error = residuals(fit, newdata = duration_dat))
-# resid_df %>%
-#   ggplot(aes(x = n_cells, y = error, color = as.factor(pca_dim))) +
-#     geom_hline(yintercept = 0) +
-#     geom_point() +
-#     facet_wrap(vars(transformation), scales = "free")
-# 
-# duration_dat %>%
-#   ggplot(aes(x = n_cells, y = cputime_sec, color = transformation)) +
-#     geom_point() +
-#     geom_line(data = predict_df) +
-#     # coord_trans(y = "log10", ylim = c(1, 1e7)) 
-#     facet_wrap(vars(transformation), scales = "free_y")
-# 
-# cross_df(list(n_genes = 10000, proportion_zeros = 0.8, pca_dim = 40, n_cells = seq(1000, 3e4, length.out = 101), dataset = "scDesign2",
-#              transformation = c("sanity_dists", "sanity_map", "logp1_hvg", "pearson_analytic", "glmpca", "dino"))) %>%
-#   mutate(cputime_sec = (predict(fit, newdata = .))) %>%
-#   ggplot(aes(x = n_cells, y = cputime_sec, color = transformation)) +
-#     geom_line() +
-#     facet_wrap(vars(transformation), scales = "free_y")
-
+res %>%
+  filter(alpha %in% c("TRUE", "FALSE")) %>%
+  filter(pca_dim == 10) %>%
+  left_join(trans_families) %>%
+  left_join(dataset_summaries %>% dplyr::select(-c(row_means, row_vars))) %>%
+  mutate(log_n_cells = log(n_cells), log_cputime_sec = log(cputime_sec)) %>%
+  nest_by(transformation) %>% 
+  mutate(fit = list(lm(log_cputime_sec ~ log_n_cells, data = data))) %>%
+  summarize(broom::tidy(fit)) %>%
+  ggplot(aes(x = transformation, y = estimate)) +
+    geom_point() +
+    geom_hline(yintercept = 1) +
+    facet_wrap(vars(term), scales= "free") +
+    scale_x_discrete(guide = guide_axis(angle = 90))
 ```
+
+
 
 
 ```{r}

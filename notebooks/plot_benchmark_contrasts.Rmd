@@ -252,8 +252,8 @@ knn_per_depth_pl <- full_knn_overlaps %>%
     # coord_cartesian(ylim = c(0, 50), clip = "off") +
     scale_color_manual(values = trans_families_colors, labels = as.character(trans_families_labels_long), name = "") +
     facet_wrap(vars(dataset_label), scales = "free") +
-    labs(y = "KNN Overlap", x = "UMIs / cell",
-         title = "(D) More UMIs/cell, better KNN overlap") +
+    labs(y = "$k$-NN Overlap", x = "UMIs / cell",
+         title = "(D) More UMIs/cell, better $k$-NN overlap") +
     theme(plot.title.position = "plot", plot.margin = unit(c(4,4,1,1), "pt"),
           plot.title = element_text(margin = unit(c(0, 0, 8, 0), "pt")),
           strip.background = element_blank(), strip.text = element_text(size = font_size_small),

@@ -393,7 +393,7 @@ for(trans in names(all_transformations)){
   |                                                                            
   |======================================================================| 100%</code></pre>
 <pre><code>## Calculating gene attributes</code></pre>
-<pre><code>## Wall clock passed: Time difference of 2.086057 secs</code></pre>
+<pre><code>## Wall clock passed: Time difference of 2.273967 secs</code></pre>
 <pre><code>## [1] &quot;Applying: rand_quantile&quot;
 ## [1] &quot;Applying: pearson_clip_hvg&quot;
 ## [1] &quot;Applying: pearson_clip_zscore&quot;
@@ -615,7 +615,7 @@ for(trans in names(all_transformations)){
 <pre><code>## Done</code></pre>
 <pre><code>## [1] &quot;Applying: normalisr_normvar&quot;
 ## [1] &quot;Applying: sanity_map&quot;
-## [1] &quot;Output dir: /var/folders/dc/tppjxs9x6ll378lq88lz1fm40000gq/T//Rtmp3kN0ld/sanity_dir119c52a600880&quot;
+## [1] &quot;Output dir: /var/folders/dc/tppjxs9x6ll378lq88lz1fm40000gq/T//Rtmp1CmJpS/sanity_dir94804fa430d0&quot;
 ## [1] &quot;Skip: sanity_dists&quot;
 ## [1] &quot;Skip: glmpca&quot;
 ## [1] &quot;Skip: newwave&quot;</code></pre>
@@ -637,7 +637,7 @@ for(trans in names(all_transformations)){
 }
 
 sanity_prob &lt;- sanity_prob_fnc(Y, size_factors, alpha = overdisp)</code></pre>
-<pre><code>## [1] &quot;Output dir: /var/folders/dc/tppjxs9x6ll378lq88lz1fm40000gq/T//Rtmp3kN0ld/sanity_dir119c561eb4b07&quot;</code></pre>
+<pre><code>## [1] &quot;Output dir: /var/folders/dc/tppjxs9x6ll378lq88lz1fm40000gq/T//Rtmp1CmJpS/sanity_dir94801283a297&quot;</code></pre>
 <pre class="r"><code>saveRDS(list(transformed_dat = transformed_dat, sanity_prob = sanity_prob ,raw = Y), &quot;../extra_data/GSE130931_transformed.Rds&quot;)
 # tmp &lt;- readRDS( &quot;../extra_data/GSE130931_transformed.Rds&quot;)
 # transformed_dat &lt;- tmp$transformed_dat
@@ -672,7 +672,8 @@ sanity_prob &lt;- sanity_prob_fnc(Y, size_factors, alpha = overdisp)</code></pre
          transformation_labelled = factor(as.character(c(trans_labels, raw = &quot;Raw&quot;)[as.character(transformation2)]), 
                                           levels = as.character(c(trans_labels, raw = &quot;Raw&quot;)[c(levels(trans_families$transformation), &quot;raw&quot;)]))) %&gt;% 
   left_join(add_row(trans_families, transformation = &quot;raw&quot;, family = &quot;raw&quot;)) %&gt;%
-  mutate(family = factor(family, levels = c(&quot;raw&quot;, &quot;delta_method&quot;, &quot;glm_residual&quot;, &quot;latent_expr&quot;))) %&gt;%
+  mutate(family = factor(family, levels = c(&quot;raw&quot;, &quot;delta_method&quot;, &quot;glm_residual&quot;, &quot;latent_expr&quot;, &quot;count_model&quot;))) %&gt;%
+  mutate(family = droplevels(family)) %&gt;%
   left_join(limits) %&gt;%
   mutate(gene_var = ifelse(gene_var &gt; ceiling, Inf, gene_var)) %&gt;%
   group_by(family) %&gt;%
@@ -706,6 +707,7 @@ sanity_prob &lt;- sanity_prob_fnc(Y, size_factors, alpha = overdisp)</code></pre
 <pre><code>##            &gt;                 ========</code></pre>
 <pre><code>##            &gt; rows total       47,542</code></pre>
 <pre><code>## mutate: converted &#39;family&#39; from character to factor (0 new NA)</code></pre>
+<pre><code>## mutate: changed 0 values (0%) of &#39;family&#39; (0 new NA)</code></pre>
 <pre><code>## Joining, by = &quot;transformation&quot;</code></pre>
 <pre><code>## left_join: added one column (ceiling)</code></pre>
 <pre><code>##            &gt; rows only in x        0</code></pre>
