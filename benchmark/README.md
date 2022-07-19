@@ -1,4 +1,4 @@
-# Preprocessing and Transformation of Single-Cell Data Benchmark
+# Comparison of Transformations for Single-Cell RNA-Seq Data
 
 This folder contains the code for the consistency, simulation, and downsampling benchmarks.
 
@@ -35,7 +35,11 @@ They will be stored in `output/benchmark_results/`.
 
 ## Interesting files
 
-* `src/transformations/trasnformation_helper.R` contains a function for each transformation and is thus the best reference to understand how each transformation is called.
-* `src/consistency_benchmark/calculate_10X_consistency.R`, `src/downsampling_benchmark/calculate_downsampling_agreement.R`, 
-and `src/simulation_benchmark/calculate_ground_truth_overlap.R` calculate the overlap metrics for the three benchmarks, respectively.
-* `src/simulation_benchmark/simulate_with_XXX.R` contain the code to simulate data with the five simulation frameworks
+* [`src/transformations/transformation_helper.R`](https://github.com/const-ae/transformGamPoi-Paper/blob/master/benchmark/src/transformations/transformation_helper.R) contains a function for each transformation and is thus the best reference to understand how each transformation is called.
+* [`src/consistency_benchmark/calculate_10X_consistency.R`](https://github.com/const-ae/transformGamPoi-Paper/blob/master/benchmark/src/consistency_benchmark/calculate_10X_consistency.R), [`src/downsampling_benchmark/calculate_downsampling_agreement.R`](https://github.com/const-ae/transformGamPoi-Paper/blob/master/benchmark/src/downsampling_benchmark/calculate_downsampling_agreement.R), 
+and [`src/simulation_benchmark/calculate_ground_truth_overlap.R`](https://github.com/const-ae/transformGamPoi-Paper/blob/master/benchmark/src/simulation_benchmark/calculate_ground_truth_overlap.R) calculate the overlap metrics for the three benchmarks, respectively.
+* [`src/simulation_benchmark/simulate_with_XXX.R`](https://github.com/const-ae/transformGamPoi-Paper/tree/master/benchmark/src/simulation_benchmark) contain the code to simulate data with the five simulation frameworks
+
+## Internal workflow management
+
+We wrote a custom workflow management system for this project that is build around the [slurm](https://slurm.schedmd.com/documentation.html), the job submission used at EMBL Heidelberg. The workflow management is implemented in [`src/job_management_utils.R`](https://github.com/const-ae/transformGamPoi-Paper/blob/master/benchmark/src/job_management_utils.R) and automatically stores intermediate results and avoids rerunning scripts if the script and the input arguments have not changed.
