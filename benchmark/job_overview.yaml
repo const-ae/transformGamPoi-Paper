@@ -23,7 +23,7 @@ simulation:
       - {name: sctransform, alpha: ["0.05", "0", "TRUE"]} 
       - {name: rand_quantile, alpha: ["0.05", "0", "TRUE"]} 
       - {name: dino, alpha: ["FALSE"]}
-      - {name: normalisr_normvar, alpha: ["FALSE"]}
+      - {name: normalisr_norm, alpha: ["FALSE"]}
       - {name: sanity_map, alpha: ["FALSE"]}
       - {name: sanity_dists, alpha: ["FALSE"]}
       - {name: glmpca, alpha: ["FALSE", "0.05"]}
@@ -54,7 +54,7 @@ simulation_for_stratification:
       - {name: sctransform, alpha: ["0.05", "0", "TRUE"]} 
       - {name: rand_quantile, alpha: ["0.05", "0", "TRUE"]} 
       - {name: dino, alpha: ["FALSE"]}
-      - {name: normalisr_normvar, alpha: ["FALSE"]}
+      - {name: normalisr_norm, alpha: ["FALSE"]}
       - {name: sanity_map, alpha: ["FALSE"]}
       - {name: sanity_dists, alpha: ["FALSE"]}
       - {name: glmpca, alpha: ["FALSE", "0.05"]}
@@ -86,7 +86,7 @@ consistency:
       - {name: sctransform, alpha: ["0.05", "0", "TRUE"]} 
       - {name: rand_quantile, alpha: ["0.05", "0", "TRUE"]} 
       - {name: dino, alpha: ["FALSE"]}
-      - {name: normalisr_normvar, alpha: ["FALSE"]}
+      - {name: normalisr_norm, alpha: ["FALSE"]}
       - {name: sanity_map, alpha: ["FALSE"]}
       - {name: sanity_dists, alpha: ["FALSE"]}
       - {name: glmpca, alpha: ["FALSE", "0.05"]}
@@ -117,7 +117,7 @@ consistency_for_stratification:
       - {name: sctransform, alpha: ["0.05", "0", "TRUE"]} 
       - {name: rand_quantile, alpha: ["0.05", "0", "TRUE"]} 
       - {name: dino, alpha: ["FALSE"]}
-      - {name: normalisr_normvar, alpha: ["FALSE"]}
+      - {name: normalisr_norm, alpha: ["FALSE"]}
       - {name: sanity_map, alpha: ["FALSE"]}
       - {name: sanity_dists, alpha: ["FALSE"]}
       - {name: glmpca, alpha: ["FALSE", "0.05"]}
@@ -149,7 +149,7 @@ downsampling:
       - {name: sctransform, alpha: ["TRUE"]} 
       - {name: rand_quantile, alpha: ["TRUE"]} 
       - {name: dino, alpha: ["FALSE"]}
-      - {name: normalisr_normvar, alpha: ["FALSE"]}
+      - {name: normalisr_norm, alpha: ["FALSE"]}
       - {name: sanity_map, alpha: ["FALSE"]}
       - {name: sanity_dists, alpha: ["FALSE"]}
       - {name: glmpca, alpha: ["FALSE"]}
@@ -181,7 +181,7 @@ downsampling_for_stratification:
       - {name: sctransform, alpha: ["TRUE"]} 
       - {name: rand_quantile, alpha: ["TRUE"]} 
       - {name: dino, alpha: ["FALSE"]}
-      - {name: normalisr_normvar, alpha: ["FALSE"]}
+      - {name: normalisr_norm, alpha: ["FALSE"]}
       - {name: sanity_map, alpha: ["FALSE"]}
       - {name: sanity_dists, alpha: ["FALSE"]}
       - {name: glmpca, alpha: ["FALSE"]}
