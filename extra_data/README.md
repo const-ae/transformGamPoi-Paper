@@ -1,0 +1,1 @@
+The content of this folder is excluded from the repository by `../.gitignore`. It is populated when rendering the notebooks by files downloaded from the internet.

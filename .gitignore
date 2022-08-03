@@ -1,4 +1,5 @@
 extra_data/*
+!extra_data/README.md
 
 
 # History files
