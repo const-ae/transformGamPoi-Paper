@@ -1,7 +1,7 @@
 
 trans_families <- list(delta_method = c("logp1", "acosh", "logp_alpha", "logp_cpm", "logp1_size_normed", "logp1_hvg", "logp1_zscore",  "logp1_hvg_zscore"),
                        glm_residual = c("pearson_clip", "sctransform", "pearson_analytic", "rand_quantile", "pearson",  "pearson_clip_hvg", "pearson_clip_zscore", "pearson_clip_hvg_zscore"),
-                       latent_expr = c("sanity_map", "sanity_dists", "dino", "normalisr_normvar"),
+                       latent_expr = c("sanity_map", "sanity_dists", "dino", "normalisr_norm"),
                        count_model = c("glmpca", "newwave")) %>%
   enframe() %>%
   unnest(value) %>%
@@ -15,7 +15,7 @@ trans_families <- list(delta_method = c("logp1", "acosh", "logp_alpha", "logp_cp
 #                            "rand_quantile" = "Random"~"Quantile", "sctransform" = "sctransform",
 #                            "pearson_clip_hvg" = "Pearson"%->%"HVG", "pearson_clip_hvg_zscore" = "Pearson"%->%"HVG"%->%"Z", 
 #                            "pearson_clip_zscore"= "Pearson"%->%"Z",
-#                            "sanity_map"="Sanity"~"MAP", "sanity_dists" = "Sanity"~"Distance", "dino" = "Dino", "normalisr_normvar" = "Normalisr")
+#                            "sanity_map"="Sanity"~"MAP", "sanity_dists" = "Sanity"~"Distance", "dino" = "Dino", "normalisr_norm" = "Normalisr")
 trans_labels <- c("acosh" = r"($\textrm{acosh}(2\alpha y/s+1)$)", "logp_alpha" = r"($\log(y/s+1/(4\alpha))$)", "logp_cpm" = r"($\log(\textrm{CPM}+1)$)",
                   "logp1" = r"($\log(y/s+1)$)", "logp1_hvg" = r"($\log(y/s+1)\rightarrow$HVG)", "logp1_hvg_zscore" = r"($\log(y/s+1)\rightarrow$HVG$\rightarrow$Z)", 
                   "logp1_zscore" = r"($\log(y/s+1)\rightarrow$Z)", "logp1_size_normed" = r"($\log(y/s+1)/u$)",
@@ -23,7 +23,7 @@ trans_labels <- c("acosh" = r"($\textrm{acosh}(2\alpha y/s+1)$)", "logp_alpha" =
                   "rand_quantile" = "Random Quantile", "sctransform" = "sctransform",
                   "pearson_clip_hvg" = r"(Pearson$\rightarrow$HVG)", "pearson_clip_hvg_zscore" = r"(Pearson$\rightarrow$HVG$\rightarrow$Z)", 
                   "pearson_clip_zscore"= r"(Pearson$\rightarrow$Z)",
-                  "sanity_map"="Sanity MAP", "sanity_dists" = "Sanity Distance", "dino" = "Dino", "normalisr_normvar" = "Normalisr",
+                  "sanity_map"="Sanity MAP", "sanity_dists" = "Sanity Distance", "dino" = "Dino", "normalisr_norm" = "Normalisr",
                   "glmpca" = "GLM PCA", "newwave" = "NewWave")
 
 trans_labels_plain <- c("acosh" = "acosh(2αy/s+1)", "logp_alpha" = "log(y/s+1/(4α))", "logp_cpm" = "log(CPM + 1)",
@@ -33,7 +33,7 @@ trans_labels_plain <- c("acosh" = "acosh(2αy/s+1)", "logp_alpha" = "log(y/s+1/(
                   "rand_quantile" = "Random Quantile", "sctransform" = "sctransform",
                   "pearson_clip_hvg" = r"(Pearson->HVG)", "pearson_clip_hvg_zscore" = r"(Pearson->HVG->Z)", 
                   "pearson_clip_zscore"= r"(Pearson->Z)",
-                  "sanity_map"="Sanity MAP", "sanity_dists" = "Sanity Distance", "dino" = "Dino", "normalisr_normvar" = "Normalisr",
+                  "sanity_map"="Sanity MAP", "sanity_dists" = "Sanity Distance", "dino" = "Dino", "normalisr_norm" = "Normalisr",
                   "glmpca" = "GLM PCA", "newwave" = "NewWave")
 
 trans_families$transformation <- factor(trans_families$transformation, levels = trans_families$transformation)
