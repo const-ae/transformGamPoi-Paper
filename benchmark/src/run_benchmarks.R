@@ -354,7 +354,7 @@ downsampling <- gather_downsampling_results(downsampling_jobs)
 table(sapply(downsampling$dependencies, job_status))
 # Store jobs and run them
 saveRDS(downsampling, file.path("output/job_storage", "downsampling_job.RDS"))
-downsampling <- run_job(downsampling)
+downsampling <- run_job(downsampling, "normal")
 saveRDS(downsampling_plotting_jobs, file.path("output/job_storage/downsampling_plotting_jobs.RDS"))
 for(job in downsampling_plotting_jobs) run_job(job)
 

@@ -255,7 +255,7 @@ dino_fnc <- function(UMI, sf, alpha){
 
 
 
-normalisr_normvar_fnc <- function(UMI, sf, alpha){
+normalisr_norm_fnc <- function(UMI, sf, alpha){
   UMI <- as.matrix(UMI)
   reticulate::use_virtualenv("normalisr_python_env", required = TRUE)
   norm <- reticulate::import("normalisr.normalisr")
@@ -264,7 +264,9 @@ normalisr_normvar_fnc <- function(UMI, sf, alpha){
   covars <- norm$normcov(norm_res[[4]])
   scaling_factors <- norm$scaling_factor(as.matrix(UMI))
   weight <- norm$compute_var(norm_res[[1]],covars)
-  normvar_res <- norm$normvar(norm_res[[1]], covars, weight, scaling_factors, nth=1)
+  # Changed `normmean = FALSE` (the default) to `normmean = TRUE` after
+  # private correspondence with Lingfei Wang, the author of `normalisr`.
+  normvar_res <- norm$normvar(norm_res[[1]], covars, weight, scaling_factors, nth=1, normmean = TRUE)
   as.matrix(normvar_res[[1]])
 }
 
@@ -324,6 +326,6 @@ all_transformations <- list(logp1 = logp1_fnc, logp_cpm = logp_cpm_fnc, acosh = 
                             logp1_hvg = logp1_hvg_fnc, logp1_zscore = logp1_zscore_fnc, logp1_hvg_zscore = logp1_hvg_zscore_fnc, logp1_size_normed = logp1_size_normed_fnc,
                             pearson = pearson_fnc, pearson_clip = pearson_clip_fnc, pearson_analytic = pearson_analytic_fnc, sctransform = sctransform_fnc, rand_quantile = rand_quantile_fnc,
                             pearson_clip_hvg = pearson_clip_hvg_fnc, pearson_clip_zscore = pearson_clip_zscore_fnc, pearson_clip_hvg_zscore = pearson_clip_hvg_zscore_fnc,
-                            dino = dino_fnc, normalisr_normvar = normalisr_normvar_fnc, sanity_map = sanity_map_fnc, sanity_dists = sanity_dists_fnc,
+                            dino = dino_fnc, normalisr_norm = normalisr_norm_fnc, sanity_map = sanity_map_fnc, sanity_dists = sanity_dists_fnc,
                             glmpca = glmpca_fnc, newwave = newwave_fnc)
 
