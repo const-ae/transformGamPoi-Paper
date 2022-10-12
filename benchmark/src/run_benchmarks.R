@@ -162,6 +162,16 @@ calculate_downsampling_agreement_for_stratification <- function(full_knns, reduc
               duration = "0-01:00:00", memory = "60GB")
 }
 
+calculate_downsampling_deepseq_overlap <- function(full_knns, dataset, seed, pca_dim, knn, transformations, alphas){
+  wrap_script("src/downsampling_benchmark/downsampling_deepseq_overlap.R", 
+              params = list(full_knn_result_ids = vapply(full_knns, function(e) e$result_id, character(1L)),
+                            dataset = dataset, seed = seed, 
+                            pca_dim = pca_dim, knn = knn, 
+                            transformations = transformations, alphas = alphas),
+              dependencies = c(full_knns),
+              duration = "0-00:30:00", memory = "60GB")
+}
+
 calculate_ground_truth_overlap <- function(knn_job, data_job,
                                            simulator, seed, pca_dim, knn, transformation, alpha){
   wrap_script("src/simulation_benchmark/calculate_ground_truth_overlap.R", 
@@ -319,6 +329,7 @@ for(job in consistency_plotting_jobs) run_job(job)
 ##############################
 
 downsampling_plotting_jobs <- list()
+deepseq_overlap_jobs <- list()
 downsampling_jobs <- list()
 # Loop over all datasets, seeds, transformations, knn and pca settings
 for(dataset_name in di$input_data$dataset){
@@ -339,6 +350,16 @@ for(dataset_name in di$input_data$dataset){
             full_knn_transformations <- append(full_knn_transformations, list(knn_full))
             reduced_knn_transformations <- append(reduced_knn_transformations, list(knn_reduced))
           }
+          if(seed == 1 && knn == 50) {
+            if((dataset_name == "smartSeq3_siRNA_knockdown" && pca_dim == 50) ||
+               (dataset_name != "smartSeq3_siRNA_knockdown" && pca_dim == 10)){
+              doj <- calculate_downsampling_deepseq_overlap(full_knn_transformations,
+                                                      dataset = dataset_name, seed = seed, pca_dim = pca_dim, knn = knn,
+                                                      alphas = vapply(di$knn_construction$transformations, function(e) e$alpha, character(1L)),
+                                                      transformations = vapply(di$knn_construction$transformations, function(e) e$name, character(1L)))
+              deepseq_overlap_jobs <- append(deepseq_overlap_jobs, list(doj))    
+            }
+          }
           res <- calculate_downsampling_agreement(full_knn_transformations, reduced_knn_transformations,
                                                   dataset = dataset_name, seed = seed, pca_dim = pca_dim, knn = knn,
                                                   alphas = vapply(di$knn_construction$transformations, function(e) e$alpha, character(1L)),
@@ -357,6 +378,8 @@ saveRDS(downsampling, file.path("output/job_storage", "downsampling_job.RDS"))
 downsampling <- run_job(downsampling, "normal")
 saveRDS(downsampling_plotting_jobs, file.path("output/job_storage/downsampling_plotting_jobs.RDS"))
 for(job in downsampling_plotting_jobs) run_job(job)
+saveRDS(deepseq_overlap_jobs, file.path("output/job_storage/deepseq_overlap_jobs.RDS"))
+for(job in deepseq_overlap_jobs) run_job(job)
 
 
 ########################################

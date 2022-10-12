@@ -79,7 +79,19 @@ if(all(sapply(sim_plots, job_status) == "done") && all(sapply(con_plots, job_sta
   print(table(sapply(dow_plots, job_status)))
 }
 
-
+##### Deeply sequenced data overlap #####
+deepseq_overlap_jobs <- readRDS(file.path("output/job_storage/deepseq_overlap_jobs.RDS"))
+if(all(sapply(deepseq_overlap_jobs, job_status) == "done")){
+  lapply(deepseq_overlap_jobs, function(job){
+    read_tsv(file.path(.OUTPUT_FOLDER, "results", job$result_id), show_col_types = FALSE, lazy = FALSE)
+  }) %>%
+    magrittr::set_names(sapply(deepseq_overlap_jobs, \(x) get_params(x)$dataset)) %>%
+    write_rds("output/benchmark_results/downsampling_deepseq_overlap.RDS", compress = "gz")
+}else{
+  benchmark_complete <- FALSE
+  message("Job stats for Deeply sequenced data overlap")
+  print(table(sapply(deepseq_overlap_jobs, job_status)))
+}
 
 ##### Dataset summaries #####
 dataset_summary <- readRDS(file.path("output/job_storage/dataset_summary.RDS"))

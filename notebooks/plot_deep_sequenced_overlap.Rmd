@@ -1,0 +1,172 @@
+---
+title: "R Notebook"
+---
+
+
+
+```{r}
+library(tidyverse)
+source("utils.R")
+source("annotation_helper.R")
+```
+
+
+```{r}
+deepseq_overlap <- read_rds("../benchmark/output/benchmark_results/downsampling_deepseq_overlap.RDS")
+```
+
+
+
+```{r}
+dat <- deepseq_overlap[[3]]
+```
+
+
+```{r}
+make_plot <- function(dat){
+
+  tmp <- dat %>%
+    group_by(transformation, origin) %>%
+    mutate(idx = rep(1:50)) %>%
+    ungroup() %>%
+    pivot_wider(c(transformation, origin), names_from = idx, values_from = neighbor, names_prefix = "neighbor_") %>%
+    nest(cols = -transformation) %>%
+    mutate(cols = map(cols, \(x) as.matrix(x[,-1])))
+  
+  names <- trans_labels[tmp$transformation]
+  similarity <- matrix(NA, nrow(tmp), nrow(tmp), dimnames = list(names, names))
+  for(i in seq_len(nrow(tmp))){
+    for(j in seq_len(nrow(tmp))){
+      if(i < j){
+        similarity[i,j] <- mean(sapply(seq_len(nrow(tmp$cols[[1]])), \(idx) length(intersect(tmp$cols[[i]][idx,], tmp$cols[[j]][idx,]))))
+        similarity[j,i] <- similarity[i,j]
+      }
+    }
+  }
+  
+  
+  ba <- ComplexHeatmap::HeatmapAnnotation(df = trans_families %>% column_to_rownames("transformation"), show_legend = FALSE, 
+                                          col = list(family = trans_families_colors), show_annotation_name = FALSE, simple_anno_size = unit(2, "mm"))
+  ra <- ComplexHeatmap::rowAnnotation(df = trans_families %>% column_to_rownames("transformation"), show_legend = FALSE, 
+                                      col = list(family = trans_families_colors), show_annotation_name = FALSE, simple_anno_size = unit(2, "mm"))
+  
+  
+  pl <- ComplexHeatmap::Heatmap(similarity[trans_families$transformation, trans_families$transformation], 
+                                top_annotation =  ba, 
+                                right_annotation = ra, show_column_names = FALSE,
+                                col = circlize::colorRamp2(breaks = seq(0, 50, length.out = 20), scales::viridis_pal()(20)),
+                                cluster_rows = FALSE, cluster_columns = FALSE,
+                                show_heatmap_legend = FALSE, row_names_gp = grid::gpar(fontsize = font_size * 0.6), column_names_gp = grid::gpar(fontsize = font_size * 0.6)) %>%
+    ComplexHeatmap::draw() %>% grid::grid.grabExpr(width = 7, height = 7)
+  
+  full_knns <- tmp %>%
+    filter(! transformation %in% c("raw_counts", "scaled_raw_counts")) 
+  
+  n_cells <- nrow(full_knns$cols[[1]])
+  
+  common_knns <- sapply(seq_len(n_cells), function(idx){
+    merged_nn <- lapply(full_knns$cols, function(knn) knn[idx, ])
+    length(purrr::reduce(merged_nn, intersect))
+  })
+  
+  pl2 <- tibble(reliable_neighbors_per_cell = common_knns) %>%
+    count(reliable_neighbors_per_cell) %>%
+    ggplot(aes(x = reliable_neighbors_per_cell, y = n)) +
+      geom_col(aes(fill = reliable_neighbors_per_cell > 1), show.legend = FALSE) +
+      # geom_vline(data = . %>% filter(reliable_neighbors_per_cell > 1) %>% summarize(mean = weighted.mean(reliable_neighbors_per_cell, n)), aes(xintercept = mean)) +
+      scale_fill_manual(values = c("FALSE" = "lightgrey", "TRUE" = "black")) +
+      scale_y_continuous(expand = expansion(mult = c(0, 0.05))) +
+      labs(x = "Reliable neighbors per cell")
+  list(pl, pl2) 
+}
+```
+
+```{r}
+plots <- c(
+  make_plot(deepseq_overlap[[1]]),
+  make_plot(deepseq_overlap[[2]]),
+  make_plot(deepseq_overlap[[3]]),
+  make_plot(deepseq_overlap[[4]]),
+  make_plot(deepseq_overlap[[5]])
+)
+cowplot::plot_grid(plotlist = plots, ncol = 2)
+```
+
+
+```{r}
+legend <- cowplot::get_legend(ggplot(tibble(), aes(x = 0, y = 0, fill = 0:50)) + geom_tile() + 
+  scale_fill_viridis_c(breaks = c(0, 25, 50)) +
+  labs(fill = "$k$-NN Overlap") +
+  guides(fill = guide_colorbar(barheight = unit(1, "mm"))) +
+  theme(legend.position = "bottom"))
+```
+
+
+```{r}
+plot_assemble(
+  list(plot = plots[[1]], x = 0, y = 3,  width = 90, height = 45),
+  annotate_text(paste0("(A) Pairwise $k$-NN overlap for ", dataset_labels[names(deepseq_overlap)[1]]), x = 2, y = 1, vjust = 1, fontsize = font_size, fontface = "bold"),
+  annotate_text(paste0("(B) Histogram of reliable-NN for ", dataset_labels[names(deepseq_overlap)[1]]), x = 77, y = 1, vjust = 1, fontsize = font_size, fontface = "bold"),
+  list(plot = plots[[2]], x = 75,  y = 6,  width = 60,  height = 43),
+  
+  list(plot = plots[[3]], x = 0, y = 53,  width = 90, height = 45),
+  annotate_text(paste0("(C) Pairwise $k$-NN overlap for ", dataset_labels[names(deepseq_overlap)[2]]), x = 2, y = 51, vjust = 1, fontsize = font_size, fontface = "bold"),
+  annotate_text(paste0("(D) Histogram of reliable-NN for ", dataset_labels[names(deepseq_overlap)[2]]), x = 77, y = 51, vjust = 1, fontsize = font_size, fontface = "bold"),
+  list(plot = plots[[4]], x = 75,  y = 56,  width = 60,  height = 43),
+  
+  list(plot = plots[[5]], x = 0, y = 103,  width = 90, height = 45),
+  annotate_text(paste0("(E) Pairwise $k$-NN overlap for ", dataset_labels[names(deepseq_overlap)[3]]), x = 2, y = 101, vjust = 1, fontsize = font_size, fontface = "bold"),
+  annotate_text(paste0("(F) Histogram of reliable-NN for ", dataset_labels[names(deepseq_overlap)[3]]), x = 77, y = 101, vjust = 1, fontsize = font_size, fontface = "bold"),
+  list(plot = plots[[6]], x = 75,  y = 106,  width = 60,  height = 43),
+  
+  list(plot = plots[[7]], x = 0, y = 153,  width = 90, height = 45),
+  annotate_text(paste0("(G) Pairwise $k$-NN overlap for ", dataset_labels[names(deepseq_overlap)[4]]), x = 2, y = 151, vjust = 1, fontsize = font_size, fontface = "bold"),
+  annotate_text(paste0("(H) Histogram of reliable-NN for ", dataset_labels[names(deepseq_overlap)[4]]), x = 77, y = 151, vjust = 1, fontsize = font_size, fontface = "bold"),
+  list(plot = plots[[8]], x = 75,  y = 156,  width = 60,  height = 43),
+  
+  list(plot = plots[[9]], x = 0, y = 203,  width = 90, height = 45),
+  annotate_text(paste0("(I) Pairwise $k$-NN overlap for ", dataset_labels[names(deepseq_overlap)[5]]), x = 2, y = 201, vjust = 1, fontsize = font_size, fontface = "bold"),
+  annotate_text(paste0("(J) Histogram of reliable-NN for ", dataset_labels[names(deepseq_overlap)[5]]), x = 77, y = 201, vjust = 1, fontsize = font_size, fontface = "bold"),
+  list(plot = plots[[10]], x = 75,  y = 206,  width = 60,  height = 43),
+  
+  list(plot = cowplot::ggdraw() + cowplot::draw_grob(legend), x = 10, y = 248, width = 20, height = 5),
+  
+  width = 150, height = 255, units = "mm", show_grid_lines = FALSE,
+  filename = "../output/suppl-deep_seq_overlap.pdf", latex_support = TRUE
+)
+```
+
+
+
+```{r}
+for(dataset_name in names(deepseq_overlap)){
+  tmp <- deepseq_overlap[[dataset_name]] %>%
+    group_by(transformation, origin) %>%
+    mutate(idx = rep(1:50)) %>%
+    ungroup() %>%
+    pivot_wider(c(transformation, origin), names_from = idx, values_from = neighbor, names_prefix = "neighbor_") %>%
+    nest(cols = -transformation) %>%
+    mutate(cols = map(cols, \(x) as.matrix(x[,-1])))
+  
+  full_knns <- tmp %>%
+    filter(! transformation %in% c("raw_counts", "scaled_raw_counts")) 
+  
+  n_cells <- nrow(full_knns$cols[[1]])
+  
+  common_knns <- sapply(seq_len(n_cells), function(idx){
+    merged_nn <- lapply(full_knns$cols, function(knn) knn[idx, ])
+    length(purrr::reduce(merged_nn, intersect))
+  })
+  
+  print(dataset_name)
+  print(round(table(common_knns > 1) / n_cells, 2))
+}
+```
+
+
+
+```{r}
+sessionInfo()
+```
+
+
