@@ -1,0 +1,149 @@
+---
+title: "R Notebook"
+---
+
+
+
+```{r}
+library(tidyverse)
+library(gggroupedscale)
+source("utils.R")
+source("annotation_helper.R")
+```
+
+Load data
+
+```{r}
+res <-  read_tsv("../benchmark/output/benchmark_results/downsampling_best_of_results.tsv") %>% 
+  transmute(benchmark = "downsampling", overlap = overlap, knn, pca_dim, alpha = as.character(alpha), transformation, dataset, replicate = seed, cputime_sec = full_cputime_sec, elapsed_sec = full_elapsed_sec)%>%
+  mutate(transformation = factor(transformation, levels = trans_families$transformation))
+res
+```
+
+
+```{r}
+parameter_choices <- tibble(benchmark = "downsampling", knn = 50, pca_dim = c(10, 10, 10, 10, 50),
+         dataset = c("mcSCRB", "smartSeq3_fibroblasts", "smartSeq3_fibroblasts_alt", "smartSeq3_hek", "smartSeq3_siRNA_knockdown"))
+```
+
+
+```{r}
+make_main_plot_panel <- function(data, add_group_label = FALSE){
+  ggplot(data, aes(x= knn_recovery, y = transformation, color = family)) +
+    geom_vline(xintercept = 1, size = 0.3, linetype = 2) +
+    ggbeeswarm::geom_quasirandom(color = "grey", size = 0.3, alpha = 0.7, groupOnX = FALSE) +
+    stat_summary(geom = "point", position = position_dodge2(width = 0.3), fun.data = mean_cl_boot) +
+    scale_y_grouped_discrete(grouping = ~ trans_families_labels[deframe(trans_families)[.x]], gap_size = 1.3, limits = rev,
+                             labels = trans_labels, add_group_label = add_group_label, guide = if(add_group_label) guide_grouped_axis() else guide_axis()) +
+    scale_x_continuous(breaks = c(0.5, 1, 1.5)) +
+    coord_cartesian(xlim = c(0.2, 1.8)) +
+    scale_color_manual(values = trans_families_colors, labels = trans_families_labels, guide = "none") +
+    theme_grouped_axis(axis.grouping.line_padding = unit(5, "pt"), axis.grouping.line_height = unit(10, "pt"), axis.grouping.label.y = element_text(size = font_size_small, angle = 90)) +
+    theme(axis.title.y = element_blank(),  plot.title.position = "plot")
+}
+```
+
+
+
+```{r}
+tmp <- res %>%
+  filter(alpha %in% c("TRUE", "FALSE")) %>%
+  tidylog::inner_join(parameter_choices)  %>%
+  mutate(knn_recovery = overlap / knn) %>%
+  group_by(dataset, replicate, knn) %>%
+  mutate(knn_recovery = knn_recovery / mean(knn_recovery)) %>%
+  tidylog::left_join(trans_families) 
+```
+
+
+```{r}
+sel_trans <- as.character(unique(tmp$transformation))
+```
+
+```{r}
+trans_families_labels_mod <- factor(c(delta_method = "Delta\nMethod", glm_residual = "GLM\nResiduals", latent_expr = "Latent\nExpr.", count_model = "Count\nModels"),
+                                    levels = c("Count\nModels", "Latent\nExpr.", "GLM\nResiduals", "Delta\nMethod"))
+```
+
+
+```{r}
+pl1 <- tmp %>%
+ ggplot(aes(x = overlap, y = transformation, color = family)) +
+    geom_vline(data = . %>% group_by(dataset) %>% summarize(mean = mean(overlap)), aes(xintercept = mean), size = 0.3, linetype = 2) +
+    ggbeeswarm::geom_quasirandom(color = "grey", size = 0.3, alpha = 0.8, groupOnX = FALSE) +
+    stat_summary(geom = "point", position = position_dodge2(width = 0.3), fun.data = mean_cl_boot) +
+    scale_y_grouped_discrete(grouping = ~ trans_families_labels_mod[deframe(trans_families)[.x]], gap_size = 0.8, limits = rev,
+                             labels = trans_labels[sel_trans], add_group_label = TRUE, guide = guide_grouped_axis()) +
+    scale_x_continuous(limits = c(0, NA), expand = expansion(mult = c(0, 0.2))) +
+    scale_color_manual(values = trans_families_colors, labels = trans_families_labels, guide = "none") +
+    facet_wrap(vars(dataset), ncol = 5, scales = "free_x", labeller = labeller(dataset = dataset_labels)) +
+    theme_grouped_axis(axis.grouping.line_padding = unit(5, "pt"), axis.grouping.line_height = unit(10, "pt"), axis.grouping.label.y = element_text(size = font_size_small, angle = 90)) +
+    theme(axis.title.y = element_blank(),  plot.title.position = "plot", axis.text.x = element_text(size = font_size_tiny), strip.background = element_blank(), panel.spacing.x = unit(4, "mm")) +
+    labs(title = "")
+pl1
+```
+
+
+
+
+
+```{r}
+deepseq_overlap <- read_rds("../benchmark/output/benchmark_results/downsampling_deepseq_overlap.RDS")
+
+
+overlap_df <- map_df(names(deepseq_overlap), \(dataset_name){
+  tmp <- deepseq_overlap[[dataset_name]] %>%
+    group_by(transformation, origin) %>%
+    mutate(idx = rep(1:50)) %>%
+    ungroup() %>%
+    pivot_wider(c(transformation, origin), names_from = idx, values_from = neighbor, names_prefix = "neighbor_") %>%
+    nest(cols = -transformation) %>%
+    mutate(cols = map(cols, \(x) as.matrix(x[,-1])))
+  
+  full_knns <- tmp %>%
+    filter(transformation %in% sel_trans) 
+  
+  n_cells <- nrow(full_knns$cols[[1]])
+  
+  common_knns <- sapply(seq_len(n_cells), function(idx){
+    merged_nn <- lapply(full_knns$cols, function(knn) knn[idx, ])
+    length(purrr::reduce(merged_nn, intersect))
+  })
+  
+  tibble(reliable_neighbors_per_cell = common_knns) %>%
+    count(reliable_neighbors_per_cell)  %>%
+    mutate(dataset = dataset_name)
+})
+```
+
+
+
+```{r}
+pl2 <- ggplot(overlap_df, aes(x = reliable_neighbors_per_cell, y = n)) +
+    geom_col(aes(fill = reliable_neighbors_per_cell > 1), show.legend = FALSE) +
+    scale_fill_manual(values = c("FALSE" = "lightgrey", "TRUE" = "black")) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.05))) +
+    scale_x_continuous(limits = c(-0.5, 50), expand = expansion(add = 0)) +
+    labs(x = "Reliable neighbors per cell", title = "(B) Histogram of reliable nearest neighbor considering only the top two transformations per approach") +
+    facet_wrap(vars(dataset), scales = "free", labeller = as_labeller(dataset_labels), nrow = 2) +
+    theme(strip.background = element_blank(), plot.title.position = "plot",) 
+```
+
+```{r}
+plot_assemble(
+  list(plot = pl1, x = 2, y = 3,  width = 138, height = 50),
+  annotate_text("(A) Downsamping results considering only the top two transformations per approach", x = 1, y = 3, vjust = 1, fontsize = font_size, fontface = "bold"),
+  list(plot = pl2, x = 0,  y = 52,  width = 140,  height = 50),
+  
+  width = 140, height = 102, units = "mm", show_grid_lines = FALSE,
+  filename = "../output/suppl-downsampling_best_of.pdf", latex_support = TRUE
+)
+```
+
+
+
+
+```{r}
+sessionInfo()
+```
+
