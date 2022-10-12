@@ -32,7 +32,7 @@ library(kableExtra)
 tab_dat <- dataset_summaries %>%
   dplyr::select(benchmark, dataset, n_cells, n_genes, proportion_zeros, quantile099_count, `median_sequencing-depth`, `overdispersion-global`) %>%
   mutate(benchmark = factor(benchmark, levels = c("consistency", "simulation", "downsampling_full", "downsampling_reduced"))) %>%
-  left_join(enframe(dataset_labels, name = "dataset", value = "dataset_label")) %>%
+  left_join(enframe(dataset_labels_plain, name = "dataset", value = "dataset_label")) %>%
   mutate(dataset_label = ifelse(benchmark == "downsampling_reduced", paste0(dataset_label, " "), dataset_label))
 
 tab_dat
@@ -91,17 +91,13 @@ gampoi_pred <- cross_df(list(row_means = mu_sup, factor = 10^seq(-2, 2, by = 2))
 
 ```{r}
 annot_df <- bind_rows(tibble(row_means = 5e3, row_vars = 5e3, label = r"($\mathbb{V}\textrm{ar}=\mu$)",
-                             dataset_label = c("GSE130931", "Dyngen", "HEK (ss3)"), 
-                             benchmark = c("Consistency", "Simulation", "Downsampling"), hjust = 0, vjust = 0.5, angle = 45),
+                             dataset_label = dataset_labels["dyngen"], benchmark = "Simulation", hjust = 0, vjust = 0.5, angle = 45),
                       tibble(row_means = sqrt(4e3), row_vars = 4e3, label = r"($\mathbb{V}\textrm{ar}=\mu+1\mu^2$)",
-                             dataset_label = c("GSE130931", "Dyngen", "HEK (ss3)"), 
-                             benchmark = c("Consistency", "Simulation", "Downsampling"), hjust = 0, vjust = 0.4, angle = atan(2) / pi * 180),
-                      tibble(row_means = sqrt(5e3 / 0.01), row_vars = 5e3, label = r"($\mathbb{V}\textrm{ar}=\mu+0.01mu^2$)",
-                             dataset_label = c("GSE130931", "Dyngen", "HEK (ss3)"), 
-                             benchmark = c("Consistency", "Simulation", "Downsampling"), hjust = 0, vjust = 0.4, angle = atan(2) / pi * 180),
+                             dataset_label = dataset_labels["dyngen"], benchmark = "Simulation", hjust = 0, vjust = 0.4, angle = atan(2) / pi * 180),
+                      tibble(row_means = sqrt(5e3 / 0.01), row_vars = 5e3, label = r"($\mathbb{V}\textrm{ar}=\mu+0.01\mu^2$)",
+                             dataset_label = dataset_labels["dyngen"], benchmark = "Simulation", hjust = 0, vjust = 0.4, angle = atan(2) / pi * 180),
                       tibble(row_means = sqrt(2e3 / 100), row_vars = 2e3, label = r"($\mathbb{V}\textrm{ar}=\mu+100\mu^2$)",
-                             dataset_label = c("GSE130931", "Dyngen", "HEK (ss3)"), 
-                             benchmark = c("Consistency", "Simulation", "Downsampling"), hjust = 0, vjust = 0.4, angle = atan(2) / pi * 180))
+                             dataset_label = dataset_labels["dyngen"], benchmark = "Simulation", hjust = 0, vjust = 0.4, angle = atan(2) / pi * 180))
 
 mean_var_plots <- mean_var_df %>%
   mutate(benchmark = factor(benchmark, levels = c("consistency", "simulation", "downsampling_full", "downsampling_reduced"),

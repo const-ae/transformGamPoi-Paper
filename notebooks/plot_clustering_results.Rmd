@@ -52,7 +52,7 @@ make_main_plot_panel <- function(data, metric, add_group_label = FALSE){
   ggplot(data, aes(x = transformation, y = {{metric}}, color = family)) +
     geom_hline(yintercept = 1, size = 0.3, linetype = 2) +
     ggbeeswarm::geom_quasirandom(color = "grey", size = 0.3, alpha = 0.7) +
-    stat_summary(geom = "point", position = position_dodge2(width = 0.3), fun.data = mean_cl_boot, fatten = 1.8) +
+    stat_summary(geom = "point", position = position_dodge2(width = 0.3), fun.data = mean_cl_boot) +
     scale_x_grouped_discrete(grouping = ~ fct_rev(trans_families_labels[deframe(trans_families)[.x]]), gap_size = 1.5, 
                              labels = trans_labels, add_group_label = add_group_label, guide = if(add_group_label) guide_grouped_axis(angle = 90) else guide_axis(angle = 90)) +
     scale_y_continuous(limits = c(0.2, 1.8), breaks = c(0.5, 1, 1.5)) +
@@ -111,7 +111,7 @@ correl_dat <- dat %>%
     scale_color_manual(values = trans_families_colors, labels = as.character(trans_families_labels_long), name = "") +
     theme(legend.position = c(1-(1/3)/2, 0.25), legend.justification = "center",
           plot.title.position = "plot", strip.background = element_blank()) +
-    labs(x = "KNN Overlap", y = "Adjusted Rand Index",
+    labs(x = "$k$-NN Overlap", y = "Adjusted Rand Index",
          title = "(C) Adjusted Rand index vs. Mean overlap per dataset")
 
 
@@ -130,7 +130,7 @@ ami_trend_pl <- dat %>%
     scale_color_manual(values = trans_families_colors, labels = as.character(trans_families_labels_long), name = "") +
     theme(legend.position = c(1-(1/3)/2, 0.25), legend.justification = "center",
           plot.title.position = "plot", strip.background = element_blank()) +
-    labs(x = "KNN Overlap", y = "Adjusted Mutual Information",
+    labs(x = "$k$-NN Overlap", y = "Adjusted Mutual Information",
          title = "(D) Adjusted Mutual Information vs. Mean overlap per dataset")
 
 

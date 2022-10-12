@@ -42,14 +42,20 @@ trans_labels_plain <- c("acosh" = "acosh(2αy/s+1)", "logp_alpha" = "log(y/s+1/(
 trans_families$transformation <- factor(trans_families$transformation, levels = trans_families$transformation)
 
 trans_families_labels <- factor(c(delta_method = "Delta Method", glm_residual = "GLM Residuals", latent_expr = "Lat. Expr.", count_model = "Count", negative_control = "Neg."), levels = c("Neg.", "Count", "Lat. Expr.", "GLM Residuals", "Delta Method"))
-trans_families_labels_long <- factor(c(delta_method = "Delta Method", glm_residual = "GLM Residuals", latent_expr = "Latent Expression", count_model = "Count Model"), levels = c("Count Model", "Latent Expression", "GLM Residuals", "Delta Method"))
-trans_families_colors <- c(delta_method = "#66C2A5", glm_residual = "#FC8D62", latent_expr = "#8DA0CB", count_model = "#e78ac3")
+trans_families_labels_long <- factor(c(delta_method = "Delta Method", glm_residual = "GLM Residuals", latent_expr = "Latent Expression", count_model = "Count Model", negative_control = "Negative Control"), levels = c("Negative Control", "Count Model", "Latent Expression", "GLM Residuals", "Delta Method"))
+trans_families_colors <- c(delta_method = "#66C2A5", glm_residual = "#FC8D62", latent_expr = "#8DA0CB", count_model = "#e78ac3", negative_control = "#7d7d7d")
 
 dataset_labels <- c(dyngen = "Dyngen", linear_walk = "Linear Walk", muscat = "muscat", random_walk = "Random Walk", scDesign2 = "scDesign2",
                     smartSeq3_fibroblasts = "Fibroblasts (ss3)", smartSeq3_fibroblasts_alt = "Fibroblasts 2 (ss3)", 
                     smartSeq3_hek = "HEK (ss3)", smartSeq3_siRNA_knockdown = "siRNA KD (ss3)", mcSCRB = "mcSCRB",
-                    GSE130931 = "GSE130931", GSE142647 = "GSE142647", GSE150068 = "GSE150068", GSE158941 = "GSE158941", GSE163505 = "GSE163505",
-                    GSE164017 = "GSE164017", GSE178765 = "GSE178765", GSE179714 = "GSE179714", GSE179831 = "GSE179831", GSE184806 = "GSE184806")
+                    GSE130931 = "Hemato.~Cells (10X)", GSE142647 = "SUM149PT Cells (10X)", GSE150068 = "Lung Epithelium (10X)", GSE158941 = "Pharyn.~Mesoderm (10X)", GSE163505 = "Neural Progen.~(10X)",
+                    GSE164017 = "Mouse Mammary (10X)", GSE178765 = "Mouse Aorta (10X)", GSE179714 = "Bovine IVDs (10X)", GSE179831 = "T Helper Cells (10X)", GSE184806 = "T Cells (10X)")
+
+dataset_labels_plain <- c(dyngen = "Dyngen", linear_walk = "Linear Walk", muscat = "muscat", random_walk = "Random Walk", scDesign2 = "scDesign2",
+                          smartSeq3_fibroblasts = "Fibroblasts", smartSeq3_fibroblasts_alt = "Fibroblasts 2", 
+                          smartSeq3_hek = "HEK", smartSeq3_siRNA_knockdown = "siRNA KD", mcSCRB = "mcSCRB",
+                          GSE130931 = "Hematopoietic Cells", GSE142647 = "SUM149PT Cells", GSE150068 = "Lung Epithelium", GSE158941 = "Pharyngeal Mesoderm", GSE163505 = "Neural Progenitors",
+                          GSE164017 = "Mouse Mammary", GSE178765 = "Mouse Aorta", GSE179714 = "Bovine IVDs", GSE179831 = "T Helper Cells", GSE184806 = "T Cells")
 
 dataset_benchmark <- c(dyngen = "simulation", linear_walk = "simulation", muscat = "simulation", random_walk = "simulation", scDesign2 = "simulation",
                        smartSeq3_fibroblasts = "downsampling", smartSeq3_fibroblasts_alt = "downsampling", 

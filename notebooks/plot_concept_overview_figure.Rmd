@@ -213,14 +213,14 @@ mouse_lung_pl <- res %>%
                                         levels = as.character(c(trans_labels, raw = "Raw")[c(levels(trans_families$transformation), "raw")]))) %>% 
   left_join(add_row(trans_families, transformation = "raw", family = "raw")) %>%
   mutate(family = factor(family, levels = c("raw", "delta_method", "glm_residual", "latent_expr"))) %>%
-  group_by(family) %>%
+  group_by(family, transformation_labelled) %>%
   group_map(function(dat, key){
-    cat <- key[[1]][1]
+    cat <- key[[2]][1]
     ggplot(dat, aes(x = gene_expr)) +
         geom_histogram(aes(fill = cell_of_interest), bins = 30, position = "identity", alpha = 0.6, show.legend = FALSE) +
         geom_blank(data = tibble(gene_expr = 0)) +
-        ggh4x::facet_wrap2(vars(transformation_labelled), ncol = 4, 
-                         strip = ggh4x::strip_vanilla(clip = "off"), scales ="free", trim_blank = TRUE) +
+        # ggh4x::facet_wrap2(vars(transformation_labelled), ncol = 4, 
+        #                  strip = ggh4x::strip_vanilla(clip = "off"), scales ="free", trim_blank = TRUE) +
         scale_y_continuous(expand = expansion(mult = c(0.015, NA)),
                            breaks = function(x){
                              signif_dig <- 1
@@ -237,17 +237,15 @@ mouse_lung_pl <- res %>%
         scale_fill_manual(values = c("FALSE"="grey", "TRUE"="#985277"),
                           labels = c("FALSE"="other cells",  "TRUE"="cells of the cell type associated with the marker gene")) +
         coord_cartesian(clip = "off") +
-        labs(x = "", y = "\\#cells") +
-        theme(strip.background = element_blank(), strip.text = element_blank(),
-              # axis.text.y = element_blank(), axis.ticks.y = element_blank(),
-              axis.title.x = element_blank(), plot.title = element_blank())
+        labs(x = cat, y = "\\#cells") +
+        theme(strip.background = element_blank(), strip.text = element_blank())
   })
 
 mouse_lung_pl[[2]] <- cowplot::ggdraw(mouse_lung_pl[[2]]) +
-  cowplot::draw_label(x = 0.5, y = 0.6, label = "Type II pneumocytes", size = font_size_small) +
-  cowplot::draw_label(x = 0.43, y = 0.5, label = "Other cells", size = font_size_small) +
-  cowplot::draw_line(x = c(0.65, 0.83), y = c(0.55, 0.2), size = 0.25) +
-  cowplot::draw_line(x = c(0.43, 0.41), y = c(0.45, 0.2), size = 0.2) 
+  cowplot::draw_label(x = 0.6, y = 0.75, label = "Type II pneumocytes", size = font_size_small) +
+  cowplot::draw_label(x = 0.43, y = 0.6, label = "Other cells", size = font_size_small) +
+  cowplot::draw_line(x = c(0.7, 0.86), y = c(0.7, 0.33), size = 0.25) +
+  cowplot::draw_line(x = c(0.43, 0.41), y = c(0.55, 0.33), size = 0.2) 
 mouse_lung_pl
 ```
 
@@ -282,7 +280,7 @@ plot_assemble(
   list(plot = size_factor_dep_plots[[4]], x = 45 * 3, y = header_height + title_gap, width = 45, height = sf_panel_height),
   # Mean Variance relation
   annotate_text(paste0("(B) Mean-variance relation for ", 
-                       prettyNum(n_genes, big.mark = "\\,"), " genes of the GSE130931 dataset"),
+                       prettyNum(n_genes, big.mark = "\\,"), " genes of the 10X hematopoietic cell dataset"),
                 x = 1, y = header_height + title_gap + sf_panel_height + 2, fontsize = font_size, fontface = "bold", vjust = 1),
   list(plot = mean_var_plots[[1]], x = 45 * 0, y = header_height + title_gap * 2 + sf_panel_height, width = 45, height = mv_panel_height),
   list(plot = mean_var_plots[[2]], x = 45 * 1, y = header_height + title_gap * 2 + sf_panel_height, width = 45, height = mv_panel_height),
