@@ -47,7 +47,7 @@ for(trans in names(all_transformations)){
 
 
 ```{r}
-saveRDS(list(transformed_dat = transformed_dat, raw = Y), "../extra_data/svensson_2017_1_transformed.Rds")
+saveRDS(list(transformed_dat = transformed_dat), "../extra_data/svensson_2017_1_transformed.Rds")
 # tmp <- readRDS( "../extra_data/svensson_2017_1_transformed.Rds")
 # transformed_dat <- tmp$transformed_dat
 ```
@@ -55,7 +55,6 @@ saveRDS(list(transformed_dat = transformed_dat, raw = Y), "../extra_data/svensso
 
 ```{r}
 tmp <- enframe(transformed_dat, name = "transformation", value = "transformed_data") %>%
-  add_row(transformation = "raw", transformed_data = list(Y)) %>%
   mutate(pca = map2(transformation, transformed_data, function(name, dat){
    if(name == "sanity_dists") cmdscale(as.matrix(dat), k = 10)
    else if(name == "glmpca"){
@@ -103,25 +102,36 @@ res <- tmp %>%
       shadowtext::geom_shadowtext(data = filter(can_cor_res, family == cat), aes(label = paste0("$\\rho = ", signif(canonical_correlation, digits = 2), "$")),
                                   x = 0, y = -Inf,  hjust = 0.5, vjust = -0.5, size = font_size_small / .pt,
                                   color = "black", bg.colour = "white", inherit.aes = FALSE) +
-      ggh4x::facet_wrap2(vars(transformation_labelled), ncol = 4, strip = ggh4x::strip_vanilla(clip = "off"), trim_blank = FALSE) +
+      ggh4x::facet_wrap2(vars(transformation_labelled), ncol = if(cat %in% c("count_model", "negative_control")) 2 else 4, 
+                                                                  strip = ggh4x::strip_vanilla(clip = "off"), trim_blank = FALSE) +
       coord_fixed(xlim = c(-15, 15), ylim = c(-15, 15)) +
       scale_x_continuous(expand = expansion(0)) +
       scale_y_continuous(expand = expansion(0)) +
       scale_color_viridis_c(limits = c(0.333, 3), breaks = c(0.4, 1, 2.5), oob = scales::squish, trans = "log2",
-                            guide = if(cat == "latent_expr") guide_colorbar() else "none") +
+                            guide = if(cat == "count_model") guide_colorbar() else "none") +
       labs(x = "PC 1", y = "PC 2", color = "Size Factor",
-           title = if(cat ==  "raw") "Raw" else trans_families_labels[as.character(cat)]) +
-      theme(legend.position = "bottom",
-            legend.justification = "center", 
-            legend.key.size = unit(font_size_small, "pt"),
+           title = trans_families_labels_long[as.character(cat)]) +
+      theme(legend.key.size = unit(font_size_small, "pt"),
             legend.title = element_text(size = font_size_small),
             axis.ticks = element_blank(), axis.text = element_blank(), axis.line = element_blank(),
             strip.text = element_text(size = font_size_tiny),
             strip.background = element_blank()) 
   })
 
-cowplot::plot_grid(plotlist = res, nrow = 4, align = "vh", rel_heights = c(1.16, 2, 2, 1.45))
-save_plot("../output/suppl-seq_depth_homogeneous_data_pattern.pdf", last_plot(), width = 150, height = 180, units = "mm", latex_support = TRUE)
+legend <- cowplot::get_legend(res[[4]])
+res[[4]] <- cowplot::plot_grid(res[[4]] + guides(color = "none"),
+                               res[[5]] + theme(axis.title.y = element_blank()), nrow = 1, align = "v", axis = "l")
+res[[5]] <- NULL
+
+comb_pl <- cowplot::plot_grid(plotlist = res, nrow = 4, rel_heights = c(2, 2, 1.16, 1.16))
+
+plot_assemble(annotate_text("(A)", x = 2,  y = 1, vjust = 1, fontsize = font_size, fontface = "bold"),
+              list(plot = comb_pl, x = 0,  y = 4,    width = 90, height = 180),
+              annotate_text("(B)", x = 95,  y = 1, vjust = 1, fontsize = font_size, fontface = "bold"),
+              list(plot = cor_pl,  x = 95, y = 4,    width = 60, height = 80),
+              list(plot = cowplot::plot_grid(cowplot::ggdraw() + cowplot::draw_grob(legend)), x = 90, y = 65, width = 180, height = 70),
+              width = 155, height = 184, units = "mm", show_grid_lines = FALSE,
+              filename = "../output/suppl-seq_depth_homogeneous_data_pattern.pdf", latex_support = TRUE)
 ```
 
 
@@ -133,3 +143,4 @@ sessionInfo()
 ```
 
 
+ 

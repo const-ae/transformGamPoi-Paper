@@ -60,8 +60,8 @@ make_main_plot_panel <- function(data, add_group_label = FALSE){
   ggplot(data, aes(x= knn_recovery, y = transformation, color = family)) +
     geom_vline(xintercept = 1, size = 0.3, linetype = 2) +
     ggbeeswarm::geom_quasirandom(color = "grey", size = 0.3, alpha = 0.7, groupOnX = FALSE) +
-    stat_summary(geom = "point", position = position_dodge2(width = 0.3), fun.data = mean_cl_boot, fatten = 1.8) +
-    scale_y_grouped_discrete(grouping = ~ trans_families_labels[deframe(trans_families)[.x]], gap_size = 1.7, limits = rev,
+    stat_summary(geom = "point", position = position_dodge2(width = 0.3), fun.data = mean_cl_boot) +
+    scale_y_grouped_discrete(grouping = ~ trans_families_labels[deframe(trans_families)[.x]], gap_size = 1.3, limits = rev,
                              labels = trans_labels, add_group_label = add_group_label, guide = if(add_group_label) guide_grouped_axis() else guide_axis()) +
     scale_x_continuous(breaks = c(0.5, 1, 1.5)) +
     coord_cartesian(xlim = c(0.2, 1.8)) +
@@ -89,7 +89,7 @@ downsampling_pl <- res_main %>%
   filter(benchmark == "downsampling") %>%
   make_main_plot_panel(add_group_label = FALSE) +
   labs(x = "Relative $k$-NN Overlap", 
-       subtitle = "Original vs. downsampled Smart-seq3 data") +
+       subtitle = "Original vs. downsampled deep-seq data") +
   NULL
 
 consistency_pl
@@ -97,6 +97,18 @@ simulation_pl
 downsampling_pl
 ```
 
+```{r}
+res %>%
+  filter(alpha %in% c("TRUE", "FALSE")) %>%
+  tidylog::inner_join(parameter_choices)  %>%
+  group_by(benchmark, dataset, transformation, knn) %>%
+  summarize(overlap = mean(overlap), .groups = "drop") %>%
+  group_by(benchmark, dataset, knn) %>%
+  summarize(max = max(overlap), min = min(overlap), 
+            best_trans = transformation[which.max(overlap)],
+            worst_tran = transformation[which.min(overlap)]) %>%
+  arrange(min - max)
+```
 
 
 
@@ -160,13 +172,13 @@ suppl_dow_k100 <- res_alt_knn %>%
        title = "(F) Downsampling: $k = 100$") +
   NULL
 
-plot_assemble(list(plot = suppl_con_k10,    x = 0,  y = 0,    width = 60, height = 75),
-              list(plot = suppl_con_k100,   x = 0, y = 75,    width = 60, height = 75),
-              list(plot = suppl_sim_k10,    x = 60,  y = 0,   width = 60, height = 75),
-              list(plot = suppl_sim_k100,   x = 60, y = 75,   width = 60, height = 75),
-              list(plot = suppl_dow_k10,    x = 120,  y = 0,  width = 60, height = 75),
-              list(plot = suppl_dow_k100,   x = 120, y = 75,  width = 60, height = 75),
-              width = 180, height = 150, units = "mm", show_grid_lines = FALSE,
+plot_assemble(list(plot = suppl_con_k10,    x = 0,  y = 0,    width = 60, height = 80),
+              list(plot = suppl_con_k100,   x = 0, y = 80,    width = 60, height = 80),
+              list(plot = suppl_sim_k10,    x = 60,  y = 0,   width = 60, height = 80),
+              list(plot = suppl_sim_k100,   x = 60, y = 80,   width = 60, height = 80),
+              list(plot = suppl_dow_k10,    x = 120,  y = 0,  width = 60, height = 80),
+              list(plot = suppl_dow_k100,   x = 120, y = 80,  width = 60, height = 80),
+              width = 180, height = 160, units = "mm", show_grid_lines = FALSE,
               filename = "../output/suppl_alt_k_benchmark.pdf", latex_support = TRUE)
 
 ```
@@ -188,8 +200,8 @@ make_main_suppl_plot_panels <- function(data, add_group_label = FALSE){
   ggplot(data, aes(x = overlap, y = transformation, color = family)) +
     geom_vline(data = . %>% group_by(dataset) %>% summarize(mean = mean(overlap)), aes(xintercept = mean), size = 0.3, linetype = 2) +
     ggbeeswarm::geom_quasirandom(color = "grey", size = 0.3, alpha = 0.8, groupOnX = FALSE) +
-    stat_summary(geom = "point", position = position_dodge2(width = 0.3), fun.data = mean_cl_boot, fatten = 1.8) +
-    scale_y_grouped_discrete(grouping = ~ trans_families_labels[deframe(trans_families)[.x]], gap_size = 1.5, limits = rev,
+    stat_summary(geom = "point", position = position_dodge2(width = 0.3), fun.data = mean_cl_boot) +
+    scale_y_grouped_discrete(grouping = ~ trans_families_labels[deframe(trans_families)[.x]], gap_size = 1.3, limits = rev,
                              labels = trans_labels, add_group_label = add_group_label, guide = if(add_group_label) guide_grouped_axis() else guide_axis()) +
     scale_x_continuous(limits = c(0, NA), expand = expansion(mult = c(0, 0.2))) +
     scale_color_manual(values = trans_families_colors, labels = trans_families_labels, guide = "none") +
@@ -211,13 +223,13 @@ sim_suppl_pl <- res_full_bench %>%
 dow_suppl_pl <- res_full_bench %>%
   filter(benchmark == "downsampling") %>%
   make_main_suppl_plot_panels(add_group_label = TRUE) +
-  labs(title = "(C) Downsampling: Original vs. downsampled Smart-seq3 data", x = "$k$-NN Overlap")
+  labs(title = "(C) Downsampling: Original vs. downsampled deeply sequenced data", x = "$k$-NN Overlap")
 
 plot_assemble(
-  list(plot = con_suppl_pl, x = 0, y = 0, width = 180, height = 120),
-  list(plot = sim_suppl_pl, x = 0, y = 120, width = 180, height = 65),
-  list(plot = dow_suppl_pl, x = 0, y = 185, width = 180, height = 65),
-  width = 180, height = 250, units = "mm", show_grid_lines = FALSE,
+  list(plot = con_suppl_pl, x = 0, y = 0, width = 180, height = 140),
+  list(plot = sim_suppl_pl, x = 0, y = 140, width = 180, height = 80),
+  list(plot = dow_suppl_pl, x = 0, y = 220, width = 180, height = 80),
+  width = 180, height = 300, units = "mm", show_grid_lines = FALSE,
   filename = "../output/suppl-raw_benchmark_results.pdf", latex_support = TRUE
 )
 
@@ -272,7 +284,7 @@ pca_pl_siRNA_kd <- pca_dat %>%
 pca_pl_10X <- pca_dat %>%
   filter(dataset == "GSE179714") %>%
   make_pca_plot_panel(long_x_scale = FALSE, breaks = c(0, 25)) +
-  labs(title = "GSE179714 (Consistency)") +
+  labs(title = paste0(dataset_labels["GSE179714"], " (Consistency)")) +
   theme(plot.title = element_text(face = "plain", size = font_size_small, hjust = 0.5, margin = margin(), lineheight = 0.8)) 
 
 ```
@@ -285,18 +297,18 @@ plot_assemble(annotate_text("(A)", x = 2, y =1, vjust = 1, fontsize = font_size,
               annotate_text("Simulation", x = 82, y = 1, vjust = 1, fontsize = font_size, fontface = "bold"),
               annotate_text("(C)", x = 122, y = 1, vjust = 1, fontsize = font_size, fontface = "bold"),
               annotate_text("Downsampling", x = 137, y = 1, vjust = 1, fontsize = font_size, fontface = "bold"),
-              annotate_graphic("../illustrations/benchmark_overviewArtboard 1.pdf", x = 32,  y = 104, units = "mm"),
-              annotate_graphic("../illustrations/benchmark_overviewArtboard 3.pdf", x = 92,  y = 104, units = "mm"),
-              annotate_graphic("../illustrations/benchmark_overviewArtboard 2.pdf", x = 152, y = 104, units = "mm"),
-              list(plot = consistency_pl,     x = 0,  y = 18,    width = 60, height = 70),
-              list(plot = simulation_pl,      x = 60, y = 18,    width = 60, height = 70),
-              list(plot = downsampling_pl,    x = 120,  y = 18,   width = 60, height = 70),
-              annotate_text("(D) $k$-NN overlap depends on \\#PCA-dimensions", x = 2, y = 92, fontsize = font_size, fontface = "bold"),
-              list(plot = pca_pl_random_walk, x = 0,   y = 92,  width = 44, height = 23),
-              list(plot = pca_pl_scDesign2,   x = 45,  y = 92,  width = 44, height = 23),
-              list(plot = pca_pl_siRNA_kd,    x = 90,  y = 92,  width = 44, height = 23),
-              list(plot = pca_pl_10X,         x = 135, y = 92,  width = 44, height = 23),
-              width = 180, height = 115, units = "mm", show_grid_lines = FALSE,
+              annotate_graphic("../illustrations/benchmark_overviewArtboard 1.pdf", x = 32,  y = 109, units = "mm"),
+              annotate_graphic("../illustrations/benchmark_overviewArtboard 3.pdf", x = 92,  y = 109, units = "mm"),
+              annotate_graphic("../illustrations/benchmark_overviewArtboard 2.pdf", x = 152, y = 109, units = "mm"),
+              list(plot = consistency_pl,     x = 0,  y = 18,    width = 60, height = 75),
+              list(plot = simulation_pl,      x = 60, y = 18,    width = 60, height = 75),
+              list(plot = downsampling_pl,    x = 120,  y = 18,   width = 60, height = 75),
+              annotate_text("(D) $k$-NN overlap depends on \\#PCA-dimensions", x = 2, y = 95.5, fontsize = font_size, fontface = "bold"),
+              list(plot = pca_pl_10X,         x = 0,   y = 97,  width = 44, height = 23),
+              list(plot = pca_pl_random_walk, x = 45,  y = 97,  width = 44, height = 23),
+              list(plot = pca_pl_scDesign2,   x = 90,  y = 97,  width = 44, height = 23),
+              list(plot = pca_pl_siRNA_kd,    x = 135, y = 97,  width = 44, height = 23),
+              width = 180, height = 120, units = "mm", show_grid_lines = FALSE,
               filename = "../output/main_benchmark_fig.pdf", latex_support = TRUE)
 ```
 
@@ -325,6 +337,7 @@ perf_plot <- res %>%
   filter(alpha %in% c("TRUE", "FALSE")) %>%
   filter(dataset == sel_dataset, pca_dim == 10, knn == 50) %>%
   tidylog::left_join(trans_families) %>%
+  filter(family != "negative_control") %>%
   ggplot(aes(x = transformation, y = cputime_sec)) +
     geom_hline(yintercept = rel_scaling_factor_lin, linetype = 2, color = "darkgrey", size = 0.5) +
     geom_hline(yintercept = rel_scaling_factor_lin * c(10, 100, 1000, 10000), linetype = 2, color = "grey", size = 0.3) +
@@ -354,49 +367,6 @@ dataset_summaries <- read_tsv("../benchmark/output/benchmark_results/dataset_sum
   dplyr::rename(dataset = name)
 ```
 
-```{r}
-res %>%
-  filter(alpha %in% c("TRUE", "FALSE")) %>%
-  filter(pca_dim == 10) %>%
-  left_join(trans_families) %>%
-  left_join(dataset_summaries %>% dplyr::select(-c(row_means, row_vars))) %>%
-  mutate(highlight = case_when(
-    transformation == "sanity_dists" ~ "sanity_dist",
-    transformation == "sanity_map" ~ "sanity_map",
-    transformation == "logp1_hvg" ~ "logp1_hvg",
-    transformation == "pearson_analytic" ~ "pearson_analytic",
-    transformation == "glmpca" ~ "glmpca",
-    transformation == "dino" ~ "dino",
-    TRUE ~ "other"
-  )) %>%
-  ggplot(aes(x = n_cells, y = cputime_sec)) +
-    geom_point() +
-    geom_abline(intercept = 0, slope = 1) +
-    geom_abline(intercept = -3, slope = 2) +
-    # geom_line(aes(color = highlight, group = transformation)) +
-    geom_smooth(aes(color = highlight, group = transformation), method = "lm") +
-    scale_x_log10() +
-    scale_y_log10()
-```
-
-```{r}
-res %>%
-  filter(alpha %in% c("TRUE", "FALSE")) %>%
-  filter(pca_dim == 10) %>%
-  left_join(trans_families) %>%
-  left_join(dataset_summaries %>% dplyr::select(-c(row_means, row_vars))) %>%
-  mutate(log_n_cells = log(n_cells), log_cputime_sec = log(cputime_sec)) %>%
-  nest_by(transformation) %>% 
-  mutate(fit = list(lm(log_cputime_sec ~ log_n_cells, data = data))) %>%
-  summarize(broom::tidy(fit)) %>%
-  ggplot(aes(x = transformation, y = estimate)) +
-    geom_point() +
-    geom_hline(yintercept = 1) +
-    facet_wrap(vars(term), scales= "free") +
-    scale_x_discrete(guide = guide_axis(angle = 90))
-```
-
-
 
 
 ```{r}
@@ -407,36 +377,11 @@ time_minor_ticks <- tibble(ticks = c(seq(0, 60, by = 10), # seconds
                                      seq(0, 8* 7 * 24 * 60 * 60, by = 5 * 24 * 60 * 60))) # 4 weeks
 time_major_ticks <- tibble(ticks = c(1, 60, 60 * 60, 24 * 60 * 60, 7 * 24 * 60 * 60))
 
-res %>%
-  filter(alpha %in% c("TRUE", "FALSE")) %>%
-  filter(pca_dim == 10) %>%
-  left_join(trans_families) %>%
-  left_join(dataset_summaries %>% dplyr::select(-c(row_means, row_vars))) %>%
-  mutate(highlight = case_when(
-    transformation == "sanity_dists" ~ "sanity_dist",
-    transformation == "sanity_map" ~ "sanity_map",
-    transformation == "logp1_hvg" ~ "logp1_hvg",
-    transformation == "pearson_analytic" ~ "pearson_analytic",
-    transformation == "dino" ~ "dino",
-    TRUE ~ "other"
-  )) %>%
-  ggplot(aes(x = n_cells, y = cputime_sec)) +
-    ggrastr::rasterise(ggbeeswarm::geom_quasirandom(alpha = 0.2, color = "grey", size = 0.1), dpi = 300) +
-    geom_smooth(aes(group = transformation, color = highlight), method = "lm", size = 0.6, se = FALSE) +
-    geom_rug(data = time_minor_ticks, aes(y = ticks, x = 0), sides = "l", color = "black", length = unit(0.3, "mm")) +
-    geom_rug(data = time_major_ticks, aes(y = ticks, x = 0), sides = "l", color = "black", length = unit(0.5, "mm")) +
-    annotation_logticks(sides = "b", short = unit(0.3, "mm"), mid = unit(0.3, "mm"), long = unit(0.5, "mm")) +
-    scale_y_log10(breaks = c(0.001, 1, 60, 60 * 60, 24 * 60 * 60, 7 * 24 * 60 * 60),
-        labels = c("1ms", "1sec", "1min", "1hour", "1day", "1week"), name = "", limits = c(1, NA), expand = expansion(mult = 0.01, 0.05)) +
-    scale_x_log10(breaks = c(300, 1000, 3000, 1e4, 3e4)) +
-    # scale_color_manual(values = transformation_category_colors, labels = transformation_category_pretty, guide = "none") +
-    labs(title = "(F) The computation time depends on \\#cells", x = "\\#Cells") +
-    theme(plot.title.position = "plot")
-
 scaling_plot <- res %>%
   filter(alpha %in% c("TRUE", "FALSE")) %>%
   filter(pca_dim == 10) %>%
   left_join(trans_families) %>%
+  filter(family != "negative_control") %>%
   left_join(dataset_summaries %>% dplyr::select(-c(row_means, row_vars))) %>%
   ggplot(aes(x = n_cells, y = cputime_sec)) +
     ggrastr::rasterise(ggbeeswarm::geom_quasirandom(alpha = 0.2, color = "grey", size = 0.1), dpi = 300) +
@@ -446,9 +391,9 @@ scaling_plot <- res %>%
     annotation_logticks(sides = "b", short = unit(0.3, "mm"), mid = unit(0.3, "mm"), long = unit(0.5, "mm")) +
     scale_y_log10(breaks = c(0.001, 1, 60, 60 * 60, 24 * 60 * 60, 7 * 24 * 60 * 60),
         labels = c("1ms", "1sec", "1min", "1hour", "1day", "1week"), name = "", limits = c(1, NA), expand = expansion(mult = 0.01, 0.05)) +
-    scale_x_log10(breaks = c(300, 1000, 3000, 1e4, 3e4)) +
+    scale_x_log10(breaks = c(300, 1000, 3000, 1e4, 3e4), labels = scales::label_comma()) +
     scale_color_manual(values = trans_families_colors, guide = "none") +
-    labs(title = "(B) The computation time depends on \\#cells", x = "\\#Cells") +
+    labs(title = "(B) The computation time depends on \\#cells", x = "\\#Cells (log-log scale)") +
     theme(plot.title.position = "plot")
 
 scaling_plot
@@ -460,7 +405,7 @@ scaling_plot
 ```{r fig.height=3.71, fig.width=6.69, dev="ragg_png"}
 plot_assemble(list(plot = perf_plot,          x = 0, y = 0,   width = 90, height = 60),
               list(plot = scaling_plot,       x = 0, y = 60,  width = 81, height = 40),
-              annotate_text("Sanity\nDistance", fontsize = font_size_small, x = 77, y = 69),
+              annotate_text("Sanity Dist.", fontsize = font_size_small, x = 77, y = 67),
               annotate_text("Sanity MAP", fontsize = font_size_small, x = 77, y = 71.7),
               annotate_text("GLM PCA", fontsize = font_size_small, x = 77, y = 74.5),
               list(plot = grid::linesGrob(x = c(1,0), y = c(0,1), default.units = "npc", gp = grid::gpar(col = "black", lty = 1, lwd = 0.5)), x = 76.1, y = 75, width = 0.8, height = 1),

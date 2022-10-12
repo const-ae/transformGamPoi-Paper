@@ -369,12 +369,12 @@ pre code {
 ## &#39;rlang::last_warnings&#39; when loading &#39;tibble&#39;</code></pre>
 <pre><code>## Warning: replacing previous import &#39;lifecycle::last_warnings&#39; by
 ## &#39;rlang::last_warnings&#39; when loading &#39;hms&#39;</code></pre>
-<pre><code>## ── Attaching packages ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse 1.3.1 ──</code></pre>
+<pre><code>## ── Attaching packages ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse 1.3.1 ──</code></pre>
 <pre><code>## ✔ ggplot2 3.3.5     ✔ purrr   0.3.4
 ## ✔ tibble  3.1.4     ✔ dplyr   1.0.7
 ## ✔ tidyr   1.1.3     ✔ stringr 1.4.0
 ## ✔ readr   2.0.1     ✔ forcats 0.5.1</code></pre>
-<pre><code>## ── Conflicts ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
+<pre><code>## ── Conflicts ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
 ## ✖ dplyr::filter() masks stats::filter()
 ## ✖ dplyr::lag()    masks stats::lag()</code></pre>
 <pre class="r"><code>library(gggroupedscale)
@@ -398,27 +398,27 @@ source(&quot;annotation_helper.R&quot;)</code></pre>
          readRDS(&quot;../benchmark/output/benchmark_results/dataset_plot_data.RDS&quot;)$downsampling[[5]] %&gt;%
               dplyr::select(-name, col_sums = col_sums_reduced, tsne_log_counts_axis1 = tsne_log_counts_reduced_axis1, tsne_log_counts_axis2 = tsne_log_counts_reduced_axis2, -col_sums_full))
 )</code></pre>
-<pre><code>## Rows: 13572 Columns: 47
-## ── Column specification ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+<pre><code>## Rows: 13572 Columns: 49
+## ── Column specification ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 ## Delimiter: &quot;\t&quot;
 ## chr  (1): dataset
-## dbl (46): seed, pca_dim, knn, logp1-FALSE, logp1_hvg-FALSE, logp1_zscore-FAL...
+## dbl (48): seed, pca_dim, knn, logp1-FALSE, logp1_hvg-FALSE, logp1_zscore-FAL...
 ## 
 ## ℹ Use `spec()` to retrieve the full column specification for this data.
 ## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.
-## Rows: 2838 Columns: 48
-## ── Column specification ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+## Rows: 2838 Columns: 50
+## ── Column specification ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 ## Delimiter: &quot;\t&quot;
 ## chr  (2): ground_truth_id, simulator
-## dbl (46): seed, pca_dim, knn, logp1-FALSE, logp1_hvg-FALSE, logp1_zscore-FAL...
+## dbl (48): seed, pca_dim, knn, logp1-FALSE, logp1_hvg-FALSE, logp1_zscore-FAL...
 ## 
 ## ℹ Use `spec()` to retrieve the full column specification for this data.
 ## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.
-## Rows: 4298 Columns: 27
-## ── Column specification ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+## Rows: 4298 Columns: 29
+## ── Column specification ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 ## Delimiter: &quot;\t&quot;
 ## chr  (1): dataset
-## dbl (26): seed, pca_dim, knn, n_common_knns, logp1-FALSE, logp1_hvg-FALSE, l...
+## dbl (28): seed, pca_dim, knn, n_common_knns, logp1-FALSE, logp1_hvg-FALSE, l...
 ## 
 ## ℹ Use `spec()` to retrieve the full column specification for this data.
 ## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
@@ -426,10 +426,16 @@ source(&quot;annotation_helper.R&quot;)</code></pre>
   stopifnot(dataset %in% unique(res$dataset))
   filter_n_common_knns_threshold &lt;- 4
   
+  tsne_extend &lt;- res %&gt;%
+    filter(dataset == .env$dataset) %&gt;%
+    summarize(extend = max(abs(c(tsne_log_counts_axis1, tsne_log_counts_axis2)))) %&gt;%
+    pull(extend)
+    
+  
   all_tsne_pl &lt;- res %&gt;%
     mutate(tsne1 = tsne_log_counts_axis1, tsne2 = tsne_log_counts_axis2) %&gt;%
     filter(dataset == .env$dataset) %&gt;%
-    pivot_longer(`logp1-FALSE`:`newwave-TRUE`, names_to = &quot;transformation&quot;, values_to = &quot;value&quot;) %&gt;%
+    pivot_longer(`logp1-FALSE`:`scaled_raw_counts-FALSE`, names_to = &quot;transformation&quot;, values_to = &quot;value&quot;) %&gt;%
     separate(transformation, into = c(&quot;transformation&quot;, &quot;alpha&quot;), sep = &quot;-&quot;) %&gt;%
     filter(alpha %in% c(&quot;TRUE&quot;, &quot;FALSE&quot;)) %&gt;%
     left_join(enframe(trans_labels, name = &quot;transformation&quot;, value = &quot;transformation_label&quot;)) %&gt;%
@@ -442,11 +448,15 @@ source(&quot;annotation_helper.R&quot;)</code></pre>
       (if(filter_n_common_knns) ggrastr::rasterise(geom_point(aes(color = `value` / n_common_knns), size = 0.01), dpi = 300, scale = 0.6) 
        else ggrastr::rasterise(geom_point(aes(color = `value` ), size = 0.01), dpi = 300, scale = 0.6)) +
       facet_wrap(vars(transformation_label), nrow = 3) +
+      scale_x_continuous(limits = tsne_extend * c(-1.3, 1.3)) +
+      scale_y_continuous(limits = tsne_extend * c(-1, 1)) +
       coord_fixed() +
-      scale_color_viridis_c(name = if(filter_n_common_knns) &quot;Relative\n$k$-NN overlap&quot; else &quot;$k$-NN overlap&quot;) +
+      scale_color_viridis_c(name = if(filter_n_common_knns) &quot;Relative\n$k$-NN overlap&quot; else &quot;$k$-NN overlap&quot;,
+                            breaks = if(filter_n_common_knns) c(0, 0.5, 1) else waiver()) +
       theme(axis.text = element_blank(), axis.ticks = element_blank(), axis.title = element_blank(),
             axis.line = element_blank(),
-            strip.background = element_blank(), legend.position = c(0.88, 0.17)) +
+            strip.background = element_blank(), legend.position = c(0.4, -0.07)) +
+      guides(color = guide_colorbar(direction = &quot;horizontal&quot;, barheight = unit(1.5, &quot;mm&quot;))) +
       labs(title = &quot;(C) $k$-NN overlap plotted on the tSNE&quot;)
   
   
@@ -459,21 +469,26 @@ source(&quot;annotation_helper.R&quot;)</code></pre>
     summarize(size = n(), tsne1 = median(tsne1), tsne2 = median(tsne2))
   
   
-  tsne_cluster_col &lt;-res %&gt;%
+  
+  tsne_cluster_col &lt;- res %&gt;%
     mutate(tsne1 = tsne_log_counts_axis1, tsne2 = tsne_log_counts_axis2) %&gt;%
     filter(dataset == .env$dataset) %&gt;%
     {if(filter_n_common_knns) filter(., n_common_knns &gt;= filter_n_common_knns_threshold)
      else identity(.)} %&gt;%
     ggplot(aes(x = tsne1, y = tsne2)) +
-      ggrastr::rasterize(geom_point(aes(color = as.factor(cluster)), show.legend = FALSE, size = 0.1), dpi = 300, scale = 0.6) +
+      ggrastr::rasterize(geom_point(aes(color = as.factor(cluster)), show.legend = FALSE, size = 0.1), dpi = 600, scale = 0.6) +
       shadowtext::geom_shadowtext(data = annot_df, aes(label = size), size = font_size_small / .pt, color = &quot;black&quot;, bg.color = &quot;white&quot;) +
-      theme(axis.text = element_blank(), axis.ticks = element_blank(), axis.title = element_blank()) +
+      scale_x_continuous(limits = tsne_extend * c(-1.5, 1.5)) +
+      scale_y_continuous(limits = tsne_extend * c(-1.05, 1.05)) +
+      coord_fixed() +
+      theme(axis.text = element_blank(), axis.ticks = element_blank(), axis.title = element_blank(), axis.line = element_blank(),
+            plot.title.position = &quot;plot&quot;) +
       labs(title = paste0(&quot;(B) tSNE of &quot;, dataset_labels[dataset], &quot; data with cluster sizes annotated&quot;))
  
   cluster_wise_perf_pl &lt;- res %&gt;%
     mutate(tsne1 = tsne_log_counts_axis1, tsne2 = tsne_log_counts_axis2) %&gt;%
     filter(dataset == .env$dataset) %&gt;%
-    pivot_longer(`logp1-FALSE`:`sanity_dists-FALSE`, names_to = &quot;transformation&quot;, values_to = &quot;value&quot;) %&gt;%
+    pivot_longer(`logp1-FALSE`:`scaled_raw_counts-FALSE`, names_to = &quot;transformation&quot;, values_to = &quot;value&quot;) %&gt;%
     separate(transformation, into = c(&quot;transformation&quot;, &quot;alpha&quot;), sep = &quot;-&quot;) %&gt;%
     filter(alpha %in% c(&quot;TRUE&quot;, &quot;FALSE&quot;)) %&gt;%
     {if(filter_n_common_knns) filter(., n_common_knns &gt;= filter_n_common_knns_threshold)
@@ -487,16 +502,17 @@ source(&quot;annotation_helper.R&quot;)</code></pre>
       geom_line(aes(color =  family, group = transformation)) +
       scale_color_manual(values = trans_families_colors, name = &quot;&quot;, labels = as.character(trans_families_labels_long)) +
       scale_y_continuous(limits = c(0, NA)) +
-      theme(legend.position = c(0.7, 0.7)) +
       labs(x = &quot;Cells per cluster&quot;, y = &quot;$k$-NN Overlap per cluster&quot;,
-           title = paste0(&quot;(A) $k$-NN overlap stratified by cluster size for &quot;, dataset_labels[dataset]))
+           title = paste0(&quot;(A) $k$-NN overlap stratified by cluster size for &quot;, dataset_labels[dataset])) +
+      theme(legend.position = c(0.7, 0.7), legend.background = element_rect(fill = alpha(&quot;white&quot;, alpha = 0.8)),
+            plot.title.position = &quot;plot&quot;)
   
   
   plot_assemble(
     list(plot = cluster_wise_perf_pl, x = 0, y = 0, width = 85, height = 60),
     list(plot = tsne_cluster_col, x = 90, y = 0, width = 90, height = 55),
-    list(plot = all_tsne_pl, x = 0, y = 55, width = 180, height = 100),
-    width = 180, height = 150, units = &quot;mm&quot;,
+    list(plot = all_tsne_pl, x = 0, y = 65, width = 180, height = 70),
+    width = 180, height = 140, units = &quot;mm&quot;,
     latex_support = TRUE, show_grid_lines = FALSE,
     filename = paste0(&quot;../output/suppl-stratified_performance_&quot;, dataset, &quot;.pdf&quot;)
   )
@@ -512,7 +528,7 @@ source(&quot;annotation_helper.R&quot;)</code></pre>
 ## 
 ## gg[gg3]</code></pre>
 <pre><code>##  [1] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
-## [16] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE</code></pre>
+## [16] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE</code></pre>
 <pre class="r"><code>make_all_plots(&quot;scDesign2&quot;)</code></pre>
 <pre><code>## Joining, by = &quot;transformation&quot;
 ## Joining, by = &quot;transformation&quot;
@@ -523,7 +539,7 @@ source(&quot;annotation_helper.R&quot;)</code></pre>
 ## 
 ## gg[gg3]</code></pre>
 <pre><code>##  [1] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
-## [16] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE</code></pre>
+## [16] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE</code></pre>
 <pre class="r"><code>make_all_plots(&quot;smartSeq3_siRNA_knockdown&quot;, filter_n_common_knns = TRUE)</code></pre>
 <pre><code>## Joining, by = &quot;transformation&quot;
 ## Joining, by = &quot;transformation&quot;
@@ -534,7 +550,7 @@ source(&quot;annotation_helper.R&quot;)</code></pre>
 ## 
 ## gg[gg3]</code></pre>
 <pre><code>##  [1] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
-## [16] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE</code></pre>
+## [16] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE</code></pre>
 <p>#Session Info</p>
 <pre class="r"><code>sessionInfo()</code></pre>
 <pre><code>## R version 4.1.1 (2021-08-10)

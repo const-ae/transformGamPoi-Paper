@@ -21,6 +21,9 @@ stopifnot(length(pa$alphas) == length(pa$reduced_knn_result_ids))
 
 
 full_KNNs <- lapply(pa$full_knn_result_ids, function(id) readRDS(file.path(pa$working_dir, "results", id)))
+# Filter out negative controls
+full_KNNs <- full_KNNs[! pa$transformations %in% c("raw_counts", "scaled_raw_counts")]
+
 reduced_KNNs <- lapply(pa$reduced_knn_result_ids, function(id) readRDS(file.path(pa$working_dir, "results", id)))
 
 stopifnot(nrow(full_KNNs[[1]]) == sapply(full_KNNs, nrow))

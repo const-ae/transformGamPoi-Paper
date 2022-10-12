@@ -2,7 +2,8 @@
 trans_families <- list(delta_method = c("logp1", "acosh", "logp_alpha", "logp_cpm", "logp1_size_normed", "logp1_hvg", "logp1_zscore",  "logp1_hvg_zscore"),
                        glm_residual = c("pearson_clip", "sctransform", "pearson_analytic", "rand_quantile", "pearson",  "pearson_clip_hvg", "pearson_clip_zscore", "pearson_clip_hvg_zscore"),
                        latent_expr = c("sanity_map", "sanity_dists", "dino", "normalisr_norm"),
-                       count_model = c("glmpca", "newwave")) %>%
+                       count_model = c("glmpca", "newwave"),
+                       negative_control = c("raw_counts", "scaled_raw_counts")) %>%
   enframe() %>%
   unnest(value) %>%
   transmute(transformation = value, family = name)
@@ -24,7 +25,8 @@ trans_labels <- c("acosh" = r"($\textrm{acosh}(2\alpha y/s+1)$)", "logp_alpha" =
                   "pearson_clip_hvg" = r"(Pearson$\rightarrow$HVG)", "pearson_clip_hvg_zscore" = r"(Pearson$\rightarrow$HVG$\rightarrow$Z)", 
                   "pearson_clip_zscore"= r"(Pearson$\rightarrow$Z)",
                   "sanity_map"="Sanity MAP", "sanity_dists" = "Sanity Distance", "dino" = "Dino", "normalisr_norm" = "Normalisr",
-                  "glmpca" = "GLM PCA", "newwave" = "NewWave")
+                  "glmpca" = "GLM PCA", "newwave" = "NewWave",
+                  "raw_counts" = "$y$", "scaled_raw_counts" = "$y/s$")
 
 trans_labels_plain <- c("acosh" = "acosh(2αy/s+1)", "logp_alpha" = "log(y/s+1/(4α))", "logp_cpm" = "log(CPM + 1)",
                   "logp1" = "log(y/s+1)", "logp1_hvg" = "log(y/s+1)->HVG", "logp1_hvg_zscore" = "log(y/s+1)->HVG->Z", 
@@ -34,11 +36,12 @@ trans_labels_plain <- c("acosh" = "acosh(2αy/s+1)", "logp_alpha" = "log(y/s+1/(
                   "pearson_clip_hvg" = r"(Pearson->HVG)", "pearson_clip_hvg_zscore" = r"(Pearson->HVG->Z)", 
                   "pearson_clip_zscore"= r"(Pearson->Z)",
                   "sanity_map"="Sanity MAP", "sanity_dists" = "Sanity Distance", "dino" = "Dino", "normalisr_norm" = "Normalisr",
-                  "glmpca" = "GLM PCA", "newwave" = "NewWave")
+                  "glmpca" = "GLM PCA", "newwave" = "NewWave",
+                  "raw_counts" = "y", "scaled_raw_counts" = "y/s")
 
 trans_families$transformation <- factor(trans_families$transformation, levels = trans_families$transformation)
 
-trans_families_labels <- factor(c(delta_method = "Delta Method", glm_residual = "GLM Residuals", latent_expr = "Lat. Expr.", count_model = "Count"), levels = c("Count", "Lat. Expr.", "GLM Residuals", "Delta Method"))
+trans_families_labels <- factor(c(delta_method = "Delta Method", glm_residual = "GLM Residuals", latent_expr = "Lat. Expr.", count_model = "Count", negative_control = "Neg."), levels = c("Neg.", "Count", "Lat. Expr.", "GLM Residuals", "Delta Method"))
 trans_families_labels_long <- factor(c(delta_method = "Delta Method", glm_residual = "GLM Residuals", latent_expr = "Latent Expression", count_model = "Count Model"), levels = c("Count Model", "Latent Expression", "GLM Residuals", "Delta Method"))
 trans_families_colors <- c(delta_method = "#66C2A5", glm_residual = "#FC8D62", latent_expr = "#8DA0CB", count_model = "#e78ac3")
 

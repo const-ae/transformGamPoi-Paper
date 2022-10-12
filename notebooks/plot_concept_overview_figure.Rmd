@@ -24,7 +24,7 @@ selected_transformations <- c("raw", "logp1", "pearson_clip", "sanity_map")
 
 ```{r}
 size_factor_transformation_res <- readRDS("../extra_data/svensson_2017_1_transformed.Rds")
-Y <- size_factor_transformation_res$raw
+Y <- size_factor_transformation_res$transformed_dat$raw_counts
 size_factors <- colSums2(Y)
 size_factors <- size_factors / mean(size_factors)
 ```

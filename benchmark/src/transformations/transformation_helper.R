@@ -319,6 +319,14 @@ newwave_fnc <- function(UMI, sf, alpha){
   UMI
 }
 
+raw_counts_fnc <- function(UMI, sf, alpha){
+  UMI
+}
+
+scaled_raw_counts_fnc <- function(UMI, sf, alpha){
+  t(t(UMI) / sf)
+}
+
 
 
 
@@ -327,5 +335,6 @@ all_transformations <- list(logp1 = logp1_fnc, logp_cpm = logp_cpm_fnc, acosh = 
                             pearson = pearson_fnc, pearson_clip = pearson_clip_fnc, pearson_analytic = pearson_analytic_fnc, sctransform = sctransform_fnc, rand_quantile = rand_quantile_fnc,
                             pearson_clip_hvg = pearson_clip_hvg_fnc, pearson_clip_zscore = pearson_clip_zscore_fnc, pearson_clip_hvg_zscore = pearson_clip_hvg_zscore_fnc,
                             dino = dino_fnc, normalisr_norm = normalisr_norm_fnc, sanity_map = sanity_map_fnc, sanity_dists = sanity_dists_fnc,
-                            glmpca = glmpca_fnc, newwave = newwave_fnc)
+                            glmpca = glmpca_fnc, newwave = newwave_fnc, 
+                            raw_counts = raw_counts_fnc, scaled_raw_counts = scaled_raw_counts_fnc)
 

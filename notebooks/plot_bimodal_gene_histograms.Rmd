@@ -130,7 +130,6 @@ other_cells <- sample(setdiff(subset_sce$cell_id, cells_of_interest), size = len
 
 res <- enframe(transformed_dat, name = "transformation", value = "transformed_data") %>%
   add_row(transformation = "sanity_dists", transformed_data = list(sanity_prob)) %>%
-  add_row(transformation = "raw", transformed_data = list(Y)) %>%
   mutate(gene_expr = map2(transformed_data, transformation, function(dat, trans){
     if(trans == "sanity_dists"){
       stopifnot(all(dim(sanity_prob$mean) == dim(Y)))
@@ -154,11 +153,10 @@ res <- enframe(transformed_dat, name = "transformation", value = "transformed_da
 
 ```{r}
 pl_list <- res %>%
-  mutate(transformation2 = factor(transformation, levels = c(as.character(trans_families$transformation), "raw")),
-       transformation_labelled = factor(as.character(c(trans_labels, raw = "Raw")[as.character(transformation2)]), 
-                                        levels = as.character(c(trans_labels, raw = "Raw")[c(levels(trans_families$transformation), "raw")]))) %>% 
-  left_join(add_row(trans_families, transformation = "raw", family = "raw")) %>%
-  mutate(family = factor(family, levels = c("raw", "delta_method", "glm_residual", "latent_expr", "count_model"))) %>%
+  mutate(transformation2 = factor(transformation, levels = as.character(trans_families$transformation)),
+       transformation_labelled = factor(trans_labels[as.character(transformation2)], levels = trans_labels[as.character(trans_families$transformation)])) %>% 
+  left_join(trans_families) %>%
+  mutate(family = factor(family, levels = unique(trans_families$family))) %>%
   mutate(family = droplevels(family)) %>%
   group_by(family) %>%
   group_map(function(dat, key){
@@ -184,8 +182,7 @@ pl_list <- res %>%
         scale_fill_manual(values = c("FALSE"="grey", "TRUE"="#985277"),
                           labels = c("FALSE"="other cells",  "TRUE"="cells of the cell type associated with the marker gene")) +
         coord_cartesian(clip = "off") +
-        labs(x = "", y = "", 
-             title = if(cat ==  "raw") "Raw" else trans_families_labels[as.character(cat)]) +
+        labs(x = "", y = "", title = trans_families_labels_long[as.character(cat)]) +
         theme(strip.background = element_blank(),
               strip.text = element_text(size = font_size_small),
               # axis.text.y = element_blank(), axis.ticks.y = element_blank(),
@@ -193,12 +190,12 @@ pl_list <- res %>%
               axis.title.x = element_blank())
   })
 
-comb_pl <- cowplot::plot_grid(plotlist = pl_list, nrow = 4, ncol = 1, align = "vh", axis = "l", rel_heights = c(1.1, 2, 2, 1.1))
+comb_pl <- cowplot::plot_grid(plotlist = pl_list, nrow = 4, ncol = 1, align = "vh", axis = "r", rel_heights = c(2, 2, 1.1, 1.1))
 comb_pl <- cowplot::ggdraw(comb_pl) +
-  cowplot::draw_label(x = 0.40, y = 0.735, label = "Type II pneumocytes", size = font_size_small) +
-  cowplot::draw_label(x = 0.365, y = 0.71, label = "Other cells", size = font_size_small) +
-  cowplot::draw_line(x = c(0.4, 0.46), y = c(0.728, 0.68), size = 0.2) +
-  cowplot::draw_line(x = c(0.365, 0.38), y = c(0.703, 0.68), size = 0.2)
+  cowplot::draw_label(x = 0.40, y = 0.915, label = "Type II pneumocytes", size = font_size_small) +
+  cowplot::draw_label(x = 0.365, y = 0.89, label = "Other cells", size = font_size_small) +
+  cowplot::draw_line(x = c(0.4, 0.46), y = c(0.908, 0.86), size = 0.2) +
+  cowplot::draw_line(x = c(0.365, 0.38), y = c(0.883, 0.86), size = 0.2)
 
 save_plot("../output/suppl-bimodal_expr_stabilization.pdf", comb_pl, width = 150, height = 160, units = "mm", latex_support = TRUE)
 ```

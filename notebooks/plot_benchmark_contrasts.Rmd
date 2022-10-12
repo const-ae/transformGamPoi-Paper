@@ -227,7 +227,9 @@ loess_fits <- full_knn_overlaps %>%
   unpack(loess_fit) %>%
   mutate(seq_depth = exp(log_seq_depth)) %>%
   left_join(trans_families) %>%
-  left_join(enframe(dataset_labels, name = "dataset", value = "dataset_label"))
+  left_join(enframe(dataset_labels, name = "dataset", value = "dataset_label")) %>%
+  filter(family != "negative_control") %>%
+  mutate(family = fct_drop(family)) 
 ```
 
 ```{r}
@@ -250,7 +252,7 @@ knn_per_depth_pl <- full_knn_overlaps %>%
     scale_x_log10() +
     # scale_y_continuous(breaks = c(0, 5, 10, 20, 30, 40, 50)) +
     # coord_cartesian(ylim = c(0, 50), clip = "off") +
-    scale_color_manual(values = trans_families_colors, labels = as.character(trans_families_labels_long), name = "") +
+    scale_color_manual(values = trans_families_colors[-5], labels = as.character(trans_families_labels_long[-5]), name = "") +
     facet_wrap(vars(dataset_label), scales = "free") +
     labs(y = "$k$-NN Overlap", x = "UMIs / cell",
          title = "(D) More UMIs/cell, better $k$-NN overlap") +
