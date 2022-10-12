@@ -33,7 +33,9 @@ Y <- as.matrix(assay(se, "X"))
 Y <- Y[rowSums2(Y) > 0, ]
 rownames(Y) <- paste0("Gene_", seq_len(nrow(Y)))
 colnames(Y) <- paste0("Cell_", seq_len(ncol(Y)))
-overdisp <- glmGamPoi::glm_gp(se, overdispersion = "global", overdispersion_shrinkage = FALSE, on_disk = FALSE)$overdispersions[1]
+# overdisp <- glmGamPoi::glm_gp(se, overdispersion = "global", 
+#                               overdispersion_shrinkage = FALSE, on_disk = FALSE)$overdispersions[1]
+overdisp <- TRUE
 ```
 
 
@@ -43,7 +45,10 @@ for(trans in names(all_transformations)){
   print(paste0("Applying trans: ", trans))
   transformed_dat[[trans]] <- all_transformations[[trans]](Y, sf = size_factors, alpha = overdisp)
 }
+# Keeping it at TRUE means that glmpca does not converge
+attr(transformed_dat$glmpca, "alpha") <- FALSE  
 ```
+
 
 
 ```{r}
@@ -74,23 +79,33 @@ tmp <- enframe(transformed_dat, name = "transformation", value = "transformed_da
 
 
 ```{r}
-
 can_cor_res <- tmp %>%
-  mutate(transformation2 = factor(transformation, levels = c("raw", as.character(trans_families$transformation))),
-         transformation_labelled = factor(as.character(c(trans_labels, raw = "Raw")[as.character(transformation2)]), 
-                                          levels = as.character(c(trans_labels, raw = "Raw")[c("raw", levels(trans_families$transformation))]))) %>%
+  mutate(transformation2 = factor(transformation, levels = as.character(trans_families$transformation)),
+         transformation_labelled = factor(trans_labels[as.character(transformation2)], levels = trans_labels[as.character(trans_families$transformation)])) %>% 
   group_by(transformation, transformation_labelled) %>%
   summarize(canonical_correlation = cancor(pca, size_factor)$cor, .groups = "drop") %>%
-  left_join(add_row(trans_families, transformation = "raw", family = "raw")) %>%
-  mutate(family = ifelse(family == "count_model", "raw",family)) 
+  left_join(trans_families) %>%
+  mutate(transformation = factor(transformation, levels = trans_families$transformation))
+
+cor_pl <- can_cor_res %>%
+  ggplot(aes(x = canonical_correlation, y = transformation, fill = family)) +
+    geom_col() +
+    geom_vline(xintercept = 1, size = 0.3) +
+    gggroupedscale::scale_y_grouped_discrete(grouping = ~ trans_families_labels[deframe(trans_families)[.x]], gap_size = 1.3, limits = rev,
+                         labels = trans_labels, add_group_label = TRUE) +
+    scale_x_continuous(expand = expansion(add = c(0, 0.1))) +
+    scale_fill_manual(values = trans_families_colors, labels = trans_families_labels, guide = "none") +
+    labs(x = "Canonical Correlation",
+         title = "Influence of size factor on PCA embedding",
+         subtitle = "Smaller values are better") +
+    gggroupedscale::theme_grouped_axis(axis.grouping.line_padding = unit(5, "pt"), axis.grouping.line_height = unit(10, "pt"), axis.grouping.label.y = element_text(size = font_size_small, angle = 90)) +
+    theme(axis.title.y = element_blank(),  plot.title.position = "plot")
 
 res <- tmp %>%
-  mutate(transformation2 = factor(transformation, levels = c("raw", as.character(trans_families$transformation))),
-         transformation_labelled = factor(as.character(c(trans_labels, raw = "Raw")[as.character(transformation2)]), 
-                                          levels = as.character(c(trans_labels, raw = "Raw")[c("raw", levels(trans_families$transformation))]))) %>% 
-  left_join(add_row(trans_families, transformation = "raw", family = "raw")) %>%
-  mutate(family = ifelse(family == "count_model", "raw",family)) %>%
-  mutate(family = factor(family, levels = c("raw", "delta_method", "glm_residual", "latent_expr"))) %>%
+  mutate(transformation2 = factor(transformation, levels = as.character(trans_families$transformation)),
+         transformation_labelled = factor(trans_labels[as.character(transformation2)], levels = trans_labels[as.character(trans_families$transformation)])) %>% 
+  left_join(trans_families) %>%
+  mutate(family = factor(family, levels = unique(trans_families$family))) %>%
   group_by(transformation) %>%
   mutate(pca = pca * 10 / quantile(abs(pca), 0.99)) %>%
   group_by(family) %>%

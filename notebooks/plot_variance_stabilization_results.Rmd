@@ -30,7 +30,9 @@ Y <- as.matrix(assay(sce, "counts"))
 Y <- Y[rowSums2(Y) > 0, ]
 rownames(Y) <- paste0("Gene_", seq_len(nrow(Y)))
 colnames(Y) <- paste0("Cell_", seq_len(ncol(Y)))
-overdisp <- glmGamPoi::glm_gp(sce, overdispersion = "global", overdispersion_shrinkage = FALSE, on_disk = FALSE)$overdispersions[1]
+# overdisp <- glmGamPoi::glm_gp(sce, overdispersion = TRUE, 
+#                               overdispersion_shrinkage = FALSE, on_disk = FALSE)$overdispersions
+overdisp <- TRUE
 ```
 
 
