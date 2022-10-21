@@ -27,5 +27,7 @@ The repository is organized into four folders. The root directory contains some 
 * [plot_bimodal_gene_histograms.Rmd](https://htmlpreview.github.io/?https://github.com/const-ae/transformGamPoi-Paper/blob/master/notebooks/plot_bimodal_gene_histograms.html) generates Suppl. Fig. S3.
 * [plot_dataset_structure.Rmd](https://github.com/const-ae/transformGamPoi-Paper/blob/master/notebooks/plot_dataset_structure.html) generates Suppl. Figs. S5, S6, and Suppl. Tab. S3.
 * [plot_benchmark_results.Rmd](https://htmlpreview.github.io/?https://github.com/const-ae/transformGamPoi-Paper/blob/master/notebooks/plot_benchmark_results.html) generates Suppl. Figs. S7, S8, in addition to Fig. 2 and 3.
-* [plot_clustering_results.Rmd](https://htmlpreview.github.io/?https://github.com/const-ae/transformGamPoi-Paper/blob/master/notebooks/plot_clustering_results.html) generates Suppl. Fig. S9.
-* [plot_stratified_performance.Rmd](https://htmlpreview.github.io/?https://github.com/const-ae/transformGamPoi-Paper/blob/master/notebooks/plot_stratified_performance.html) generates Suppl. Figs. S10, S11, and S12.
+* [plot_deep_sequenced_overlap.Rmd](https://htmlpreview.github.io/?https://github.com/const-ae/transformGamPoi-Paper/blob/master/notebooks/plot_deep_sequenced_overlap.html) generates Suppl. Fig. S9.
+* [plot_best_of_downsampling.Rmd](https://htmlpreview.github.io/?https://github.com/const-ae/transformGamPoi-Paper/blob/master/notebooks/plot_best_of_downsampling.html) generates Supp. Fig. S11
+* [plot_clustering_results.Rmd](https://htmlpreview.github.io/?https://github.com/const-ae/transformGamPoi-Paper/blob/master/notebooks/plot_clustering_results.html) generates Suppl. Fig. S11.
+* [plot_stratified_performance.Rmd](https://htmlpreview.github.io/?https://github.com/const-ae/transformGamPoi-Paper/blob/master/notebooks/plot_stratified_performance.html) generates Suppl. Figs. S12, S13, and S14.
