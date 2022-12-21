@@ -38,6 +38,9 @@ tmp <- res %>%
   mutate(knn_recovery = knn_recovery / mean(knn_recovery)) %>%
   tidylog::left_join(trans_families) 
 
+sel_trans <- as.character(unique(tmp$transformation))
+
+
 pl1 <- tmp %>%
  ggplot(aes(x = overlap, y = transformation, color = family)) +
     geom_vline(data = . %>% group_by(dataset) %>% summarize(mean = mean(overlap)), aes(xintercept = mean), size = 0.3, linetype = 2) +
@@ -96,6 +99,8 @@ pairwise_df <- map_df(deepseq_overlap, calc_pairwise_overlap, .id = "dataset")
 
 ```{r}
 pairwise_pl <- pairwise_df %>%
+  mutate(A = factor(A, levels(trans_families$transformation)),
+         B = factor(B, levels(trans_families$transformation))) %>%
   ggplot(aes(x = A, y = B)) +
     geom_rect(xmin = 0, xmax = 27, ymin = 0, ymax = 27, fill = "#F2F2F2") +
     geom_tile(aes(fill = overlap)) +
@@ -111,13 +116,12 @@ pairwise_pl <- pairwise_df %>%
           strip.background = element_blank(), plot.title.position = "plot", 
           legend.position = c(0.7, 0.2), legend.direction = "horizontal") +
     labs(title = "(A) Pairwise $k$-NN overlap")
+
+pairwise_pl
 ```
 
 
 ```{r}
-sel_trans <- as.character(unique(res$transformation))
-
-
 overlap_df <- map_df(names(deepseq_overlap), \(dataset_name){
   tmp <- deepseq_overlap[[dataset_name]] %>%
     group_by(transformation, origin) %>%
