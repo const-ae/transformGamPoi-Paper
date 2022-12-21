@@ -300,6 +300,21 @@ plot_assemble(
 
 
 
+```{r}
+pca_plot_data <- size_factor_dep_data %>%
+  mutate(pca = as_tibble(pca, .name_repair = \(.) paste0("PC_", 1:10))) %>%
+  tidyr::unpack(pca)
+
+bimodal_data <- res %>%
+  left_join(trans_families) %>%
+  dplyr::select(transformation, family, cell_of_interest, gene_expr) 
+
+mean_var_data <- mean_var_df %>%
+  left_join(trans_families) %>%
+  dplyr::select(transformation, family, gene_mean, gene_var) 
+
+writexl::write_xlsx(list("Size Factor Confounding" = pca_plot_data, "Mean-Variance Relation" = mean_var_data, "Bimodal Expression Pattern" = bimodal_data), path = "../output/main_concept_figure_source_data.xlsx")
+```
 
 
 

@@ -177,6 +177,13 @@ cowplot::plot_grid(plotlist = tsne_plots, nrow = 4, align = "vh", rel_heights = 
 save_plot("../output/suppl-tsne_datasets.pdf", last_plot(), width = 150, height = 180, units = "mm", latex_support = TRUE)
 ```
 
+```{r}
+tnse_dat %>%
+  dplyr::select(benchmark, dataset, dataset_label, cluster, tsne) %>%
+  mutate(tsne = as_tibble(tsne, .name_repair = \(.) paste0("TSNE_", 1:2))) %>%
+  tidyr::unpack(tsne) %>%
+  write_tsv("../output/suppl-tsne_datasets_source_data.tsv")
+```
 
 
 # Session Info

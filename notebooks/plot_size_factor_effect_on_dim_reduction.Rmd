@@ -149,7 +149,16 @@ plot_assemble(annotate_text("(A)", x = 2,  y = 1, vjust = 1, fontsize = font_siz
               filename = "../output/suppl-seq_depth_homogeneous_data_pattern.pdf", latex_support = TRUE)
 ```
 
+```{r}
+pca_plot_data <- tmp %>%
+  mutate(pca = as_tibble(pca, .name_repair = \(.) paste0("PC_", 1:10))) %>%
+  tidyr::unpack(pca)
 
+can_cor_res_for_saving <- can_cor_res %>%
+  dplyr::select(transformation, family, canonical_correlation)
+  
+writexl::write_xlsx(list("PCA Data" = pca_plot_data, "Canonical Correlation" = can_cor_res_for_saving), path = "../output/suppl-seq_depth_homogeneous_data_pattern_source_data.xlsx")
+```
 
 # Session Info
 

@@ -144,6 +144,13 @@ assembled_pl <- cowplot::plot_grid(plotlist = mean_var_plots, nrow = 4, align = 
 save_plot("../output/suppl-mean_var_relation.pdf", assembled_pl, width = 150, height = 180, units = "mm", latex_support = TRUE)
 ```
 
+```{r}
+mean_var_df %>%
+  left_join(trans_families) %>%
+  dplyr::select(transformation, family, gene_mean, gene_var) %>%
+  write_tsv("../output/suppl-mean_var_relation_source_data.tsv")
+```
+
 
 
 

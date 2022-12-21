@@ -183,6 +183,12 @@ plot_assemble(list(plot = suppl_con_k10,    x = 0,  y = 0,    width = 60, height
 
 ```
 
+```{r}
+res_alt_knn %>%
+  ungroup() %>%
+  dplyr::select(benchmark, transformation, family, dataset, replicate, pca_dim, alpha, knn, overlap, knn_recovery) %>%
+  write_tsv("../output/suppl_alt_k_benchmark_source_data.tsv")
+```
 
 ```{r}
 res_full_bench <- res %>%
@@ -233,6 +239,15 @@ plot_assemble(
   filename = "../output/suppl-raw_benchmark_results.pdf", latex_support = TRUE
 )
 
+```
+
+
+
+```{r}
+res_full_bench %>%
+  ungroup() %>%
+  dplyr::select(benchmark, transformation, family, dataset, replicate, pca_dim, alpha, knn, overlap) %>%
+  write_tsv("../output/suppl-raw_benchmark_results_source_data.tsv")
 ```
 
 
@@ -311,6 +326,20 @@ plot_assemble(annotate_text("(A)", x = 2, y =1, vjust = 1, fontsize = font_size,
               width = 180, height = 120, units = "mm", show_grid_lines = FALSE,
               filename = "../output/main_benchmark_fig.pdf", latex_support = TRUE)
 ```
+
+
+```{r}
+main_data <- res_main %>%
+  ungroup() %>%
+  dplyr::select(benchmark, transformation, family, dataset, replicate, pca_dim, alpha, knn, overlap, knn_recovery) 
+
+pca_data <- pca_dat %>%
+  ungroup() %>%
+  dplyr::select(benchmark, transformation, family, dataset, pca_dim, knn_recovery) 
+  
+writexl::write_xlsx(list("Benchmark Overview" = main_data, "PCA Dependence" = pca_data), path = "../output/main_benchmark_fig_source_data.xlsx")
+```
+
 
 
 # Duration plots
@@ -416,6 +445,24 @@ plot_assemble(list(plot = perf_plot,          x = 0, y = 0,   width = 90, height
               filename = "../output/main_duration.pdf", latex_support = TRUE)
 ```
 
+```{r}
+main_duration_data <- res %>%
+  filter(alpha %in% c("TRUE", "FALSE")) %>%
+  filter(dataset == sel_dataset, pca_dim == 10, knn == 50) %>%
+  tidylog::left_join(trans_families) %>%
+  filter(family != "negative_control") %>%
+  dplyr::select(benchmark, transformation, family, dataset, replicate, pca_dim, knn, alpha, cputime_sec, elapsed_sec)
+
+scaling_data <- res %>%
+  filter(alpha %in% c("TRUE", "FALSE")) %>%
+  filter(pca_dim == 10) %>%
+  left_join(trans_families) %>%
+  filter(family != "negative_control") %>%
+  left_join(dataset_summaries %>% dplyr::select(-c(row_means, row_vars))) %>%
+  dplyr::select(benchmark, transformation, family, dataset, replicate, pca_dim, knn, alpha, n_cells, n_genes, proportion_zeros, cputime_sec, elapsed_sec)
+  
+writexl::write_xlsx(list("Duration on GSE179831" = main_duration_data, "Duration vs Dataset size" = scaling_data), path = "../output/main_duration_source_data.xlsx")
+```
 
 ```{r}
 res %>%

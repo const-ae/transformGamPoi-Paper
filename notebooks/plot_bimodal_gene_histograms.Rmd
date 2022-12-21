@@ -200,6 +200,12 @@ comb_pl <- cowplot::ggdraw(comb_pl) +
 save_plot("../output/suppl-bimodal_expr_stabilization.pdf", comb_pl, width = 150, height = 160, units = "mm", latex_support = TRUE)
 ```
 
+```{r}
+res %>%
+  left_join(trans_families) %>%
+  dplyr::select(transformation, family, cell_of_interest, gene_expr) %>%
+  write_tsv("../output/suppl-bimodal_expr_stabilization_source_data.tsv")
+```
 
 
 # Session Info

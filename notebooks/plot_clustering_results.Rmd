@@ -150,6 +150,14 @@ plot_assemble(
 ```
 
 
+```{r}
+res_main %>%
+  ungroup() %>%
+  dplyr::transmute(benchmark, transformation, family, dataset = simulator, replicate = seed, pca_dim, alpha, knn, n_clusters, n_clusters_counts, ARI, AMI, NMI, rel_ARI, rel_AMI, rel_NMI, mean_knn_overlap) %>%
+  write_tsv("../output/suppl-simulation_clustering_results_source_data.tsv")
+```
+
+
 
 # Session Info
 

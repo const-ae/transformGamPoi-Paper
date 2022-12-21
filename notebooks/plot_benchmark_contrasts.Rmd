@@ -282,6 +282,25 @@ plot_assemble(
 )
 ```
 
+```{r}
+contrast_data <- res %>%
+  filter(knn == 50) %>%
+  mutate(alpha = ifelse(alpha == "0", "FALSE", alpha)) %>%
+  tidylog::inner_join(dplyr::select(parameter_choices, -knn))  %>%
+  mutate(knn_recovery = overlap / knn) %>%
+  group_by(dataset, replicate) %>%
+  mutate(knn_recovery = knn_recovery / mean(knn_recovery)) %>%
+  dplyr::select(benchmark, transformation, dataset, replicate, pca_dim, alpha, knn, knn_recovery) 
+
+depth_vs_overlap <- full_knn_overlaps %>%
+  transmute(dataset, seq_depth = col_sums, logp1 = `logp1-FALSE`, pearson_clip = `pearson_clip-0.05`, sanity_map = `sanity_map-FALSE`) %>%
+  pivot_longer(c(logp1, pearson_clip, sanity_map), names_to = "transformation", values_to = "overlap") %>%
+  left_join(trans_families) %>%
+  left_join(enframe(dataset_labels_plain, name = "dataset", value = "dataset_label")) %>%
+  dplyr::select(dataset, dataset_label, seq_depth, transformation, family, overlap)
+
+writexl::write_xlsx(list("Contrast Data" = contrast_data, "Seq. Depth vs kNN Trend" = depth_vs_overlap), path = "../output/main_contrasts_fig_source_data.xlsx")
+```
 
 
 # Session Info
