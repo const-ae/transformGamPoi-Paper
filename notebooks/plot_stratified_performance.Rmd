@@ -36,71 +36,16 @@ res <- bind_rows(
 
 ```{r}
 
-make_all_plots <- function(dataset, filter_n_common_knns = FALSE){
+make_all_plots <- function(dataset, filter_n_common_knns = FALSE, show_legend = FALSE, plot_panel = "A"){
   stopifnot(dataset %in% unique(res$dataset))
   filter_n_common_knns_threshold <- 4
   
-  tsne_extend <- res %>%
-    filter(dataset == .env$dataset) %>%
-    summarize(extend = max(abs(c(tsne_log_counts_axis1, tsne_log_counts_axis2)))) %>%
-    pull(extend)
-    
-  
-  all_tsne_pl <- res %>%
-    mutate(tsne1 = tsne_log_counts_axis1, tsne2 = tsne_log_counts_axis2) %>%
-    filter(dataset == .env$dataset) %>%
-    pivot_longer(`logp1-FALSE`:`scaled_raw_counts-FALSE`, names_to = "transformation", values_to = "value") %>%
-    separate(transformation, into = c("transformation", "alpha"), sep = "-") %>%
-    filter(alpha %in% c("TRUE", "FALSE")) %>%
-    left_join(enframe(trans_labels, name = "transformation", value = "transformation_label")) %>%
-    left_join(trans_families) %>%
-    mutate(transformaton = factor(transformation, levels = trans_families$transformation),
-           transformation_label = fct_reorder(as.factor(transformation_label), as.numeric(transformaton))) %>%
-    {if(filter_n_common_knns) filter(., n_common_knns >= filter_n_common_knns_threshold)
-     else identity(.)} %>%
-    ggplot(aes(x = tsne1, y = tsne2)) +
-      (if(filter_n_common_knns) ggrastr::rasterise(geom_point(aes(color = `value` / n_common_knns), size = 0.01), dpi = 300, scale = 0.6) 
-       else ggrastr::rasterise(geom_point(aes(color = `value` ), size = 0.01), dpi = 300, scale = 0.6)) +
-      facet_wrap(vars(transformation_label), nrow = 3) +
-      scale_x_continuous(limits = tsne_extend * c(-1.3, 1.3)) +
-      scale_y_continuous(limits = tsne_extend * c(-1, 1)) +
-      coord_fixed() +
-      scale_color_viridis_c(name = if(filter_n_common_knns) "Relative\n$k$-NN overlap" else "$k$-NN overlap",
-                            breaks = if(filter_n_common_knns) c(0, 0.5, 1) else waiver()) +
-      theme(axis.text = element_blank(), axis.ticks = element_blank(), axis.title = element_blank(),
-            axis.line = element_blank(),
-            strip.background = element_blank(), legend.position = c(0.4, -0.07)) +
-      guides(color = guide_colorbar(direction = "horizontal", barheight = unit(1.5, "mm"))) +
-      labs(title = "(C) $k$-NN overlap plotted on the tSNE")
-  
-  
-  annot_df <- res %>%
-    mutate(tsne1 = tsne_log_counts_axis1, tsne2 = tsne_log_counts_axis2) %>%
+   annot_df <- res %>%
     filter(dataset == .env$dataset) %>%
     {if(filter_n_common_knns) filter(., n_common_knns >= filter_n_common_knns_threshold)
-     else identity(.)} %>%
-    group_by(cluster) %>%
-    summarize(size = n(), tsne1 = median(tsne1), tsne2 = median(tsne2))
+     else identity(.)} 
   
-  
-  
-  tsne_cluster_col <- res %>%
-    mutate(tsne1 = tsne_log_counts_axis1, tsne2 = tsne_log_counts_axis2) %>%
-    filter(dataset == .env$dataset) %>%
-    {if(filter_n_common_knns) filter(., n_common_knns >= filter_n_common_knns_threshold)
-     else identity(.)} %>%
-    ggplot(aes(x = tsne1, y = tsne2)) +
-      ggrastr::rasterize(geom_point(aes(color = as.factor(cluster)), show.legend = FALSE, size = 0.1), dpi = 600, scale = 0.6) +
-      shadowtext::geom_shadowtext(data = annot_df, aes(label = size), size = font_size_small / .pt, color = "black", bg.color = "white") +
-      scale_x_continuous(limits = tsne_extend * c(-1.5, 1.5)) +
-      scale_y_continuous(limits = tsne_extend * c(-1.05, 1.05)) +
-      coord_fixed() +
-      theme(axis.text = element_blank(), axis.ticks = element_blank(), axis.title = element_blank(), axis.line = element_blank(),
-            plot.title.position = "plot") +
-      labs(title = paste0("(B) tSNE of ", dataset_labels[dataset], " data with cluster sizes annotated"))
- 
-  cluster_wise_perf_pl <- res %>%
-    mutate(tsne1 = tsne_log_counts_axis1, tsne2 = tsne_log_counts_axis2) %>%
+  res %>%
     filter(dataset == .env$dataset) %>%
     pivot_longer(`logp1-FALSE`:`scaled_raw_counts-FALSE`, names_to = "transformation", values_to = "value") %>%
     separate(transformation, into = c("transformation", "alpha"), sep = "-") %>%
@@ -113,37 +58,35 @@ make_all_plots <- function(dataset, filter_n_common_knns = FALSE){
               median = median(value), .groups = "drop") %>%
     left_join(trans_families) %>%
     ggplot(aes(x = cluster_size, y = mean)) +
-      geom_line(aes(color =  family, group = transformation)) +
+      geom_line(aes(color =  family, group = transformation), show.legend = show_legend) +
       scale_color_manual(values = trans_families_colors, name = "", labels = as.character(trans_families_labels_long)) +
       scale_y_continuous(limits = c(0, NA)) +
       labs(x = "Cells per cluster", y = "$k$-NN Overlap per cluster",
-           title = paste0("(A) $k$-NN overlap stratified by cluster size for ", dataset_labels[dataset])) +
+           title = paste0("(", plot_panel, ") $k$-NN overlap stratified by cluster size for ", dataset_labels[dataset])) +
       theme(legend.position = c(0.7, 0.7), legend.background = element_rect(fill = alpha("white", alpha = 0.8)),
             plot.title.position = "plot")
   
-  
-  plot_assemble(
-    list(plot = cluster_wise_perf_pl, x = 0, y = 0, width = 85, height = 60),
-    list(plot = tsne_cluster_col, x = 90, y = 0, width = 90, height = 55),
-    list(plot = all_tsne_pl, x = 0, y = 65, width = 180, height = 70),
-    width = 180, height = 140, units = "mm",
-    latex_support = TRUE, show_grid_lines = FALSE,
-    filename = paste0("../output/suppl-stratified_performance_", dataset, ".pdf")
-  )
-   
 }
 
 
+pl1 <- make_all_plots("GSE163505", plot_panel = "A")
+pl2 <- make_all_plots("scDesign2", show_legend = TRUE, plot_panel = "B")
+pl3 <- make_all_plots("smartSeq3_siRNA_knockdown", filter_n_common_knns = TRUE, plot_panel = "C")
 
+plot_assemble(
+  list(plot = pl1, x = 0, y = 0, width = 120, height = 60),
+  list(plot = pl2, x = 0, y = 60, width = 120, height = 60),
+  list(plot = pl3, x = 0, y = 120, width = 120, height = 60),
+  width = 120, height = 180, units = "mm",
+  latex_support = TRUE, show_grid_lines = FALSE,
+  filename = paste0("../output/suppl-stratified_performance.pdf")
+)
 ```
 
 
-
-
 ```{r}
-make_all_plots("GSE163505")
-make_all_plots("scDesign2")
-make_all_plots("smartSeq3_siRNA_knockdown", filter_n_common_knns = TRUE)
+res %>%
+  write_tsv("../output/suppl-stratified_performance_source_data.tsv")
 ```
 
 
