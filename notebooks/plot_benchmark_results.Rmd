@@ -97,6 +97,40 @@ simulation_pl
 downsampling_pl
 ```
 
+
+
+
+```{r}
+result_correlation_dat <- res_main %>%
+  ungroup() %>%
+  dplyr::select(benchmark, knn_recovery, transformation, family, dataset, replicate) %>%
+  group_by(benchmark, transformation, family) %>%
+  summarize(knn_recovery = mean(knn_recovery)) %>%
+  inner_join(., ., by = c("transformation", "family")) %>%
+  mutate(benchmark.x = as.factor(benchmark.x),
+         benchmark.y = as.factor(benchmark.y)) %>%
+  filter(benchmark.x != benchmark.y) 
+
+result_correlation_dat %>%
+  group_by(benchmark.x, benchmark.y) %>%
+  summarize(cor = cor(knn_recovery.x, knn_recovery.y, method = "pearson"),
+            cor_rank = cor(knn_recovery.x, knn_recovery.y, method = "spearman"),
+            p_val = cor.test(knn_recovery.x, knn_recovery.y, method = "pearson")$p.value,
+            p_val_rank = cor.test(knn_recovery.x, knn_recovery.y, method = "spearman")$p.value)
+
+ggplot(result_correlation_dat, aes(x = knn_recovery.x, y = knn_recovery.y)) +
+  ggpubr::stat_cor(size = 2) +
+  geom_smooth(method = "lm") +
+  geom_point(aes(color = family)) +
+  facet_grid(vars(benchmark.x), vars(benchmark.y)) +
+  coord_fixed() +
+  scale_color_manual(values = trans_families_colors, labels = trans_families_labels, guide = "none") +
+  lims(x = c(0.4, 1.6), y = c(0.4, 1.6)) +
+  labs(title = "The results of the three benchmarks are highly correlated")
+```
+
+
+
 ```{r}
 res %>%
   filter(alpha %in% c("TRUE", "FALSE")) %>%
