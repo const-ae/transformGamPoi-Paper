@@ -266,10 +266,10 @@ dow_suppl_pl <- res_full_bench %>%
   labs(title = "(C) Downsampling: Original vs. downsampled deeply sequenced data", x = "$k$-NN Overlap")
 
 plot_assemble(
-  list(plot = con_suppl_pl, x = 0, y = 0, width = 180, height = 140),
-  list(plot = sim_suppl_pl, x = 0, y = 140, width = 180, height = 80),
-  list(plot = dow_suppl_pl, x = 0, y = 220, width = 180, height = 80),
-  width = 180, height = 300, units = "mm", show_grid_lines = FALSE,
+  list(plot = con_suppl_pl, x = 0, y = 0, width = 210, height = 139),
+  list(plot = sim_suppl_pl, x = 0, y = 139, width = 210, height = 79),
+  list(plot = dow_suppl_pl, x = 0, y = 218, width = 210, height = 79),
+  width = 210, height = 297, units = "mm", show_grid_lines = FALSE,
   filename = "../output/suppl-raw_benchmark_results.pdf", latex_support = TRUE
 )
 
