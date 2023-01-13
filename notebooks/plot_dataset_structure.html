@@ -356,18 +356,13 @@ display: none;
 
 
 <pre class="r"><code>library(tidyverse)</code></pre>
-<pre><code>## Warning: replacing previous import &#39;lifecycle::last_warnings&#39; by
-## &#39;rlang::last_warnings&#39; when loading &#39;pillar&#39;</code></pre>
-<pre><code>## Warning: replacing previous import &#39;lifecycle::last_warnings&#39; by
-## &#39;rlang::last_warnings&#39; when loading &#39;tibble&#39;</code></pre>
-<pre><code>## Warning: replacing previous import &#39;lifecycle::last_warnings&#39; by
-## &#39;rlang::last_warnings&#39; when loading &#39;hms&#39;</code></pre>
-<pre><code>## ── Attaching packages ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse 1.3.1 ──</code></pre>
-<pre><code>## ✔ ggplot2 3.3.5     ✔ purrr   0.3.4
+<pre><code>## ── Attaching packages ───────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse 1.3.1 ──</code></pre>
+<pre><code>## ✔ ggplot2 3.3.5     ✔ purrr   1.0.0
 ## ✔ tibble  3.1.4     ✔ dplyr   1.0.7
 ## ✔ tidyr   1.1.3     ✔ stringr 1.4.0
 ## ✔ readr   2.0.1     ✔ forcats 0.5.1</code></pre>
-<pre><code>## ── Conflicts ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
+<pre><code>## Warning: package &#39;purrr&#39; was built under R version 4.1.2</code></pre>
+<pre><code>## ── Conflicts ──────────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
 ## ✖ dplyr::filter() masks stats::filter()
 ## ✖ dplyr::lag()    masks stats::lag()</code></pre>
 <pre class="r"><code>library(gggroupedscale)
@@ -376,7 +371,7 @@ source(&quot;annotation_helper.R&quot;)</code></pre>
 <pre class="r"><code>dataset_summaries &lt;- read_tsv(&quot;../benchmark/output/benchmark_results/dataset_summaries.tsv&quot;) %&gt;%
   dplyr::rename(dataset = name)</code></pre>
 <pre><code>## Rows: 25 Columns: 19
-## ── Column specification ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+## ── Column specification ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 ## Delimiter: &quot;\t&quot;
 ## chr  (5): id, name, benchmark, row_means, row_vars
 ## dbl (14): n_cells, n_genes, proportion_zeros, quantile025_count, quantile050...
@@ -454,9 +449,11 @@ str_split(tab_string, &quot;\n&quot;)[[1]] %&gt;%
 }
 mu_sup &lt;- lseq(1e-4, 1e6, length.out = 101)
 poisson_pred &lt;- cross_df(list(row_means = mu_sup, factor = 10^seq(-4, 6))) %&gt;%
-  mutate(row_vars = row_means * factor)
-
-gampoi_pred &lt;- cross_df(list(row_means = mu_sup, factor = 10^seq(-2, 2, by = 2))) %&gt;%
+  mutate(row_vars = row_means * factor)</code></pre>
+<pre><code>## Warning: `cross_df()` was deprecated in purrr 1.0.0.
+## ℹ Please use `tidyr::expand_grid()` instead.
+## ℹ See &lt;https://github.com/tidyverse/purrr/issues/768&gt;.</code></pre>
+<pre class="r"><code>gampoi_pred &lt;- cross_df(list(row_means = mu_sup, factor = 10^seq(-2, 2, by = 2))) %&gt;%
   mutate(row_vars = row_means + row_means^2 * factor) </code></pre>
 <pre class="r"><code>annot_df &lt;- bind_rows(tibble(row_means = 5e3, row_vars = 5e3, label = r&quot;($\mathbb{V}\textrm{ar}=\mu$)&quot;,
                              dataset_label = dataset_labels[&quot;dyngen&quot;], benchmark = &quot;Simulation&quot;, hjust = 0, vjust = 0.5, angle = 45),
@@ -568,7 +565,7 @@ cowplot::plot_grid(plotlist = tsne_plots, nrow = 4, align = &quot;vh&quot;, rel_
   dplyr::select(benchmark, dataset, dataset_label, cluster, tsne) %&gt;%
   mutate(tsne = as_tibble(tsne, .name_repair = \(.) paste0(&quot;TSNE_&quot;, 1:2))) %&gt;%
   tidyr::unpack(tsne) %&gt;%
-  write_tsv(&quot;../output/suppl-tsne_datasets_source_data.tsv&quot;)</code></pre>
+  write_csv(&quot;../output/suppl-tsne_datasets_source_data.csv&quot;)</code></pre>
 </div>
 <div id="session-info" class="section level1">
 <h1>Session Info</h1>
@@ -589,7 +586,7 @@ cowplot::plot_grid(plotlist = tsne_plots, nrow = 4, align = &quot;vh&quot;, rel_
 ## 
 ## other attached packages:
 ##  [1] kableExtra_1.3.4     gggroupedscale_0.0.3 forcats_0.5.1       
-##  [4] stringr_1.4.0        dplyr_1.0.7          purrr_0.3.4         
+##  [4] stringr_1.4.0        dplyr_1.0.7          purrr_1.0.0         
 ##  [7] readr_2.0.1          tidyr_1.1.3          tibble_3.1.4        
 ## [10] ggplot2_3.3.5        tidyverse_1.3.1     
 ## 
@@ -605,12 +602,12 @@ cowplot::plot_grid(plotlist = tsne_plots, nrow = 4, align = &quot;vh&quot;, rel_
 ## [25] broom_0.7.9         haven_2.4.3         scales_1.1.1       
 ## [28] webshot_0.5.3       svglite_2.1.0       ggrastr_0.2.3      
 ## [31] tzdb_0.1.2          generics_0.1.2      farver_2.1.0       
-## [34] ellipsis_0.3.2      withr_2.4.2         cli_3.3.0          
+## [34] ellipsis_0.3.2      withr_2.4.2         cli_3.5.0          
 ## [37] magrittr_2.0.1      crayon_1.4.1        readxl_1.3.1       
 ## [40] evaluate_0.14       fs_1.5.0            fansi_0.5.0        
 ## [43] xml2_1.3.2          beeswarm_0.4.0      textshaping_0.3.5  
 ## [46] Cairo_1.5-12.2      tools_4.1.1         hms_1.1.0          
-## [49] lifecycle_1.0.0     munsell_0.5.0       reprex_2.0.1       
+## [49] lifecycle_1.0.3     munsell_0.5.0       reprex_2.0.1       
 ## [52] compiler_4.1.1      jquerylib_0.1.4     systemfonts_1.0.2  
 ## [55] rlang_1.0.6         grid_4.1.1          rstudioapi_0.13    
 ## [58] filehash_2.4-3      labeling_0.4.2      rmarkdown_2.11     
@@ -619,7 +616,7 @@ cowplot::plot_grid(plotlist = tsne_plots, nrow = 4, align = &quot;vh&quot;, rel_
 ## [67] fastmap_1.1.0       bit_4.0.4           utf8_1.2.2         
 ## [70] ragg_1.1.3          stringi_1.7.4       ggbeeswarm_0.6.0   
 ## [73] parallel_4.1.1      Rcpp_1.0.7          png_0.1-7          
-## [76] vctrs_0.3.8         dbplyr_2.1.1        tidyselect_1.1.1   
+## [76] vctrs_0.5.1         dbplyr_2.1.1        tidyselect_1.1.1   
 ## [79] xfun_0.26</code></pre>
 </div>
 

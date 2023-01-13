@@ -424,18 +424,13 @@ display: none;
 ## 
 ##     anyMissing, rowMedians</code></pre>
 <pre class="r"><code>library(tidyverse)</code></pre>
-<pre><code>## Warning: replacing previous import &#39;lifecycle::last_warnings&#39; by
-## &#39;rlang::last_warnings&#39; when loading &#39;pillar&#39;</code></pre>
-<pre><code>## Warning: replacing previous import &#39;lifecycle::last_warnings&#39; by
-## &#39;rlang::last_warnings&#39; when loading &#39;tibble&#39;</code></pre>
-<pre><code>## Warning: replacing previous import &#39;lifecycle::last_warnings&#39; by
-## &#39;rlang::last_warnings&#39; when loading &#39;hms&#39;</code></pre>
-<pre><code>## ── Attaching packages ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse 1.3.1 ──</code></pre>
-<pre><code>## ✔ ggplot2 3.3.5     ✔ purrr   0.3.4
+<pre><code>## ── Attaching packages ───────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse 1.3.1 ──</code></pre>
+<pre><code>## ✔ ggplot2 3.3.5     ✔ purrr   1.0.0
 ## ✔ tibble  3.1.4     ✔ dplyr   1.0.7
 ## ✔ tidyr   1.1.3     ✔ stringr 1.4.0
 ## ✔ readr   2.0.1     ✔ forcats 0.5.1</code></pre>
-<pre><code>## ── Conflicts ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
+<pre><code>## Warning: package &#39;purrr&#39; was built under R version 4.1.2</code></pre>
+<pre><code>## ── Conflicts ──────────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
 ## ✖ dplyr::collapse()   masks IRanges::collapse()
 ## ✖ dplyr::combine()    masks Biobase::combine(), BiocGenerics::combine()
 ## ✖ dplyr::count()      masks matrixStats::count()
@@ -475,16 +470,13 @@ if(! file.exists(&quot;../extra_data/mouse_lung_single_cell_metadata.csv&quot;))
 load(&quot;../extra_data/mouse_lung_single_cell.RData&quot;)
 metadat &lt;- read_csv(&quot;../extra_data/mouse_lung_single_cell_metadata.csv&quot;)</code></pre>
 <pre><code>## New names:
-## * `` -&gt; ...1</code></pre>
-<pre><code>## Rows: 14813 Columns: 13
-## ── Column specification ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-## Delimiter: &quot;,&quot;
-## chr (8): ...1, orig.ident, identifier, identifier.1, grouping, batch, cluste...
-## dbl (4): nGene, nUMI, res.2, cells
-## lgl (1): name
-## 
-## ℹ Use `spec()` to retrieve the full column specification for this data.
-## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
+## Rows: 14813 Columns: 13
+## ── Column specification
+## ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── Delimiter: &quot;,&quot; chr
+## (8): ...1, orig.ident, identifier, identifier.1, grouping, batch, cluste... dbl (4): nGene, nUMI, res.2, cells lgl (1): name
+## ℹ Use `spec()` to retrieve the full column specification for this data. ℹ Specify the column types or set `show_col_types = FALSE` to quiet this
+## message.
+## • `` -&gt; `...1`</code></pre>
 <pre class="r"><code>col_data &lt;- metadat %&gt;%
   transmute(barcode = str_split_fixed(...1, &quot;:&quot;, 3)[,3],
             mouse_id = identifier, age = grouping, cell_type = celltype) %&gt;%
@@ -584,7 +576,7 @@ for(trans in names(all_transformations)){
   |                                                                            
   |======================================================================| 100%</code></pre>
 <pre><code>## Calculating gene attributes</code></pre>
-<pre><code>## Wall clock passed: Time difference of 0.9268529 secs</code></pre>
+<pre><code>## Wall clock passed: Time difference of 1.023611 secs</code></pre>
 <pre><code>## [1] &quot;Applying: rand_quantile&quot;
 ## [1] &quot;Applying: pearson_clip_hvg&quot;
 ## [1] &quot;Applying: pearson_clip_zscore&quot;
@@ -620,7 +612,7 @@ for(trans in names(all_transformations)){
 <pre><code>## Done</code></pre>
 <pre><code>## [1] &quot;Applying: normalisr_norm&quot;
 ## [1] &quot;Applying: sanity_map&quot;
-## [1] &quot;Output dir: /var/folders/dc/tppjxs9x6ll378lq88lz1fm40000gq/T//RtmpK0aZ8p/sanity_dir181057c4ffc94&quot;
+## [1] &quot;Output dir: /var/folders/dc/tppjxs9x6ll378lq88lz1fm40000gq/T//RtmpSrZbV3/sanity_dir71a88df75c3&quot;
 ## [1] &quot;Skip: sanity_dists&quot;
 ## [1] &quot;Skip: glmpca&quot;
 ## [1] &quot;Skip: newwave&quot;
@@ -644,7 +636,7 @@ for(trans in names(all_transformations)){
 }
 
 sanity_prob &lt;- sanity_prob_fnc(Y, size_factors, alpha = overdisp)</code></pre>
-<pre><code>## [1] &quot;Output dir: /var/folders/dc/tppjxs9x6ll378lq88lz1fm40000gq/T//RtmpK0aZ8p/sanity_dir1810538bad62e&quot;</code></pre>
+<pre><code>## [1] &quot;Output dir: /var/folders/dc/tppjxs9x6ll378lq88lz1fm40000gq/T//RtmpSrZbV3/sanity_dir71a819b55ad9&quot;</code></pre>
 <pre class="r"><code>saveRDS(list(transformed_dat = transformed_dat, sanity_prob = sanity_prob, raw = Y, cell_type = subset_sce$cell_type),
         &quot;../extra_data/mouse_lung_transformed.Rds&quot;)
 # tmp &lt;- readRDS( &quot;../extra_data/mouse_lung_transformed.Rds&quot;)
@@ -723,7 +715,7 @@ save_plot(&quot;../output/suppl-bimodal_expr_stabilization.pdf&quot;, comb_pl, w
 <pre class="r"><code>res %&gt;%
   left_join(trans_families) %&gt;%
   dplyr::select(transformation, family, cell_of_interest, gene_expr) %&gt;%
-  write_tsv(&quot;../output/suppl-bimodal_expr_stabilization_source_data.tsv&quot;)</code></pre>
+  write_csv(&quot;../output/suppl-bimodal_expr_stabilization_source_data.csv&quot;)</code></pre>
 <pre><code>## Joining, by = &quot;transformation&quot;</code></pre>
 <div id="session-info" class="section level1">
 <h1>Session Info</h1>
@@ -746,7 +738,7 @@ save_plot(&quot;../output/suppl-bimodal_expr_stabilization.pdf&quot;, comb_pl, w
 ## other attached packages:
 ##  [1] Matrix_1.3-4                forcats_0.5.1              
 ##  [3] stringr_1.4.0               dplyr_1.0.7                
-##  [5] purrr_0.3.4                 readr_2.0.1                
+##  [5] purrr_1.0.0                 readr_2.0.1                
 ##  [7] tidyr_1.1.3                 tibble_3.1.4               
 ##  [9] ggplot2_3.3.5               tidyverse_1.3.1            
 ## [11] SingleCellExperiment_1.14.1 SummarizedExperiment_1.22.0
@@ -771,7 +763,7 @@ save_plot(&quot;../output/suppl-bimodal_expr_stabilization.pdf&quot;, comb_pl, w
 ##  [25] labeling_0.4.2            GenomeInfoDbData_1.2.6   
 ##  [27] polyclip_1.10-0           farver_2.1.0             
 ##  [29] bit64_4.0.5               rprojroot_2.0.2          
-##  [31] parallelly_1.28.1         vctrs_0.3.8              
+##  [31] parallelly_1.28.1         vctrs_0.5.1              
 ##  [33] transformGamPoi_1.1.5     generics_0.1.2           
 ##  [35] xfun_0.26                 R6_2.5.1                 
 ##  [37] rsvd_1.0.5                locfit_1.5-9.4           
@@ -811,7 +803,7 @@ save_plot(&quot;../output/suppl-bimodal_expr_stabilization.pdf&quot;, comb_pl, w
 ## [105] tzdb_0.1.2                filehash_2.4-3           
 ## [107] lubridate_1.7.10          DBI_1.1.1                
 ## [109] dbplyr_2.1.1              MASS_7.3-54              
-## [111] cli_3.3.0                 metapod_1.0.0            
+## [111] cli_3.5.0                 metapod_1.0.0            
 ## [113] igraph_1.2.6              pkgconfig_2.0.3          
 ## [115] plotly_4.10.0             scuttle_1.2.1            
 ## [117] spatstat.sparse_2.0-0     xml2_1.3.2               
@@ -823,7 +815,7 @@ save_plot(&quot;../output/suppl-bimodal_expr_stabilization.pdf&quot;, comb_pl, w
 ## [129] leiden_0.3.9              tikzDevice_0.12.3.1      
 ## [131] uwot_0.1.10               edgeR_3.34.1             
 ## [133] DelayedMatrixStats_1.14.3 shiny_1.7.2              
-## [135] lifecycle_1.0.0           nlme_3.1-153             
+## [135] lifecycle_1.0.3           nlme_3.1-153             
 ## [137] jsonlite_1.7.2            BiocNeighbors_1.10.0     
 ## [139] viridisLite_0.4.0         limma_3.48.3             
 ## [141] fansi_0.5.0               pillar_1.6.2             

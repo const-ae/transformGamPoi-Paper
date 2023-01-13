@@ -182,7 +182,7 @@ tnse_dat %>%
   dplyr::select(benchmark, dataset, dataset_label, cluster, tsne) %>%
   mutate(tsne = as_tibble(tsne, .name_repair = \(.) paste0("TSNE_", 1:2))) %>%
   tidyr::unpack(tsne) %>%
-  write_tsv("../output/suppl-tsne_datasets_source_data.tsv")
+  write_csv("../output/suppl-tsne_datasets_source_data.csv")
 ```
 
 

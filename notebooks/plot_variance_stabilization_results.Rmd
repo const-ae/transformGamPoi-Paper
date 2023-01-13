@@ -148,7 +148,7 @@ save_plot("../output/suppl-mean_var_relation.pdf", assembled_pl, width = 150, he
 mean_var_df %>%
   left_join(trans_families) %>%
   dplyr::select(transformation, family, gene_mean, gene_var) %>%
-  write_tsv("../output/suppl-mean_var_relation_source_data.tsv")
+  write_csv("../output/suppl-mean_var_relation_source_data.csv")
 ```
 
 

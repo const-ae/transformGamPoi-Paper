@@ -356,18 +356,13 @@ display: none;
 
 
 <pre class="r"><code>library(tidyverse)</code></pre>
-<pre><code>## Warning: replacing previous import &#39;lifecycle::last_warnings&#39; by
-## &#39;rlang::last_warnings&#39; when loading &#39;pillar&#39;</code></pre>
-<pre><code>## Warning: replacing previous import &#39;lifecycle::last_warnings&#39; by
-## &#39;rlang::last_warnings&#39; when loading &#39;tibble&#39;</code></pre>
-<pre><code>## Warning: replacing previous import &#39;lifecycle::last_warnings&#39; by
-## &#39;rlang::last_warnings&#39; when loading &#39;hms&#39;</code></pre>
-<pre><code>## ── Attaching packages ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse 1.3.1 ──</code></pre>
-<pre><code>## ✔ ggplot2 3.3.5     ✔ purrr   0.3.4
+<pre><code>## ── Attaching packages ───────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse 1.3.1 ──</code></pre>
+<pre><code>## ✔ ggplot2 3.3.5     ✔ purrr   1.0.0
 ## ✔ tibble  3.1.4     ✔ dplyr   1.0.7
 ## ✔ tidyr   1.1.3     ✔ stringr 1.4.0
 ## ✔ readr   2.0.1     ✔ forcats 0.5.1</code></pre>
-<pre><code>## ── Conflicts ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
+<pre><code>## Warning: package &#39;purrr&#39; was built under R version 4.1.2</code></pre>
+<pre><code>## ── Conflicts ──────────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
 ## ✖ dplyr::filter() masks stats::filter()
 ## ✖ dplyr::lag()    masks stats::lag()</code></pre>
 <pre class="r"><code>library(gggroupedscale)
@@ -384,7 +379,7 @@ source(&quot;annotation_helper.R&quot;)</code></pre>
 ) %&gt;%
   mutate(transformation = factor(transformation, levels = trans_families$transformation))</code></pre>
 <pre><code>## Rows: 26850 Columns: 16
-## ── Column specification ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+## ── Column specification ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 ## Delimiter: &quot;\t&quot;
 ## chr  (5): ground_truth_id, transformation_id, simulator, transformation, alpha
 ## dbl (11): ARI, AMI, NMI, mean_knn_overlap, n_clusters, n_clusters_counts, se...
@@ -392,7 +387,7 @@ source(&quot;annotation_helper.R&quot;)</code></pre>
 ## ℹ Use `spec()` to retrieve the full column specification for this data.
 ## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.
 ## Rows: 26985 Columns: 10
-## ── Column specification ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+## ── Column specification ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 ## Delimiter: &quot;\t&quot;
 ## chr (4): transformation_id, dataset, transformation, alpha
 ## dbl (6): mean_overlap, seed, pca_dim, knn, cputime_sec, elapsed_sec
@@ -400,7 +395,7 @@ source(&quot;annotation_helper.R&quot;)</code></pre>
 ## ℹ Use `spec()` to retrieve the full column specification for this data.
 ## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.
 ## Rows: 7200 Columns: 13
-## ── Column specification ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+## ── Column specification ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 ## Delimiter: &quot;\t&quot;
 ## chr (4): transformation_full_data_ids, transformation_reduced_data_ids, data...
 ## dbl (8): overlap, seed, pca_dim, knn, full_cputime_sec, full_elapsed_sec, re...
@@ -703,7 +698,7 @@ plot_assemble(list(plot = suppl_con_k10,    x = 0,  y = 0,    width = 60, height
 <pre class="r"><code>res_alt_knn %&gt;%
   ungroup() %&gt;%
   dplyr::select(benchmark, transformation, family, dataset, replicate, pca_dim, alpha, knn, overlap, knn_recovery) %&gt;%
-  write_tsv(&quot;../output/suppl_alt_k_benchmark_source_data.tsv&quot;)</code></pre>
+  write_csv(&quot;../output/suppl_alt_k_benchmark_source_data.csv&quot;)</code></pre>
 <pre class="r"><code>res_full_bench &lt;- res %&gt;%
   filter(alpha %in% c(&quot;TRUE&quot;, &quot;FALSE&quot;)) %&gt;%
   tidylog::inner_join(parameter_choices)  %&gt;%
@@ -781,7 +776,7 @@ plot_assemble(
 <pre class="r"><code>res_full_bench %&gt;%
   ungroup() %&gt;%
   dplyr::select(benchmark, transformation, family, dataset, replicate, pca_dim, alpha, knn, overlap) %&gt;%
-  write_tsv(&quot;../output/suppl-raw_benchmark_results_source_data.tsv&quot;)</code></pre>
+  write_csv(&quot;../output/suppl-raw_benchmark_results_source_data.csv&quot;)</code></pre>
 </div>
 <div id="number-of-pca-dimensions-are-important" class="section level1">
 <h1>Number of PCA dimensions are important</h1>
@@ -959,7 +954,7 @@ perf_plot &lt;- res %&gt;%
 <pre class="r"><code>dataset_summaries &lt;- read_tsv(&quot;../benchmark/output/benchmark_results/dataset_summaries.tsv&quot;) %&gt;%
   dplyr::rename(dataset = name)</code></pre>
 <pre><code>## Rows: 25 Columns: 19
-## ── Column specification ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+## ── Column specification ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 ## Delimiter: &quot;\t&quot;
 ## chr  (5): id, name, benchmark, row_means, row_vars
 ## dbl (14): n_cells, n_genes, proportion_zeros, quantile025_count, quantile050...
@@ -1132,7 +1127,7 @@ scaling_plot &lt;- res %&gt;%
 ## 
 ## other attached packages:
 ##  [1] gggroupedscale_0.0.3 forcats_0.5.1        stringr_1.4.0       
-##  [4] dplyr_1.0.7          purrr_0.3.4          readr_2.0.1         
+##  [4] dplyr_1.0.7          purrr_1.0.0          readr_2.0.1         
 ##  [7] tidyr_1.1.3          tibble_3.1.4         ggplot2_3.3.5       
 ## [10] tidyverse_1.3.1     
 ## 
@@ -1172,7 +1167,7 @@ scaling_plot &lt;- res %&gt;%
 ##  [65] ggplotify_0.1.0             tidyselect_1.1.1           
 ##  [67] labeling_0.4.2              rlang_1.0.6                
 ##  [69] munsell_0.5.0               cellranger_1.1.0           
-##  [71] tools_4.1.1                 cli_3.3.0                  
+##  [71] tools_4.1.1                 cli_3.5.0                  
 ##  [73] generics_0.1.2              broom_0.7.9                
 ##  [75] evaluate_0.14               fastmap_1.1.0              
 ##  [77] ragg_1.1.3                  yaml_2.2.1                 
@@ -1185,8 +1180,8 @@ scaling_plot &lt;- res %&gt;%
 ##  [91] ggsignif_0.6.3              reprex_2.0.1               
 ##  [93] bslib_0.3.0                 stringi_1.7.4              
 ##  [95] highr_0.9                   lattice_0.20-44            
-##  [97] Matrix_1.3-4                vctrs_0.3.8                
-##  [99] pillar_1.6.2                lifecycle_1.0.0            
+##  [97] Matrix_1.3-4                vctrs_0.5.1                
+##  [99] pillar_1.6.2                lifecycle_1.0.3            
 ## [101] jquerylib_0.1.4             data.table_1.14.0          
 ## [103] cowplot_1.1.1               bitops_1.0-7               
 ## [105] rtracklayer_1.52.1          GenomicRanges_1.44.0       

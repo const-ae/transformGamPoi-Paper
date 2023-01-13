@@ -221,7 +221,7 @@ plot_assemble(list(plot = suppl_con_k10,    x = 0,  y = 0,    width = 60, height
 res_alt_knn %>%
   ungroup() %>%
   dplyr::select(benchmark, transformation, family, dataset, replicate, pca_dim, alpha, knn, overlap, knn_recovery) %>%
-  write_tsv("../output/suppl_alt_k_benchmark_source_data.tsv")
+  write_csv("../output/suppl_alt_k_benchmark_source_data.csv")
 ```
 
 ```{r}
@@ -281,7 +281,7 @@ plot_assemble(
 res_full_bench %>%
   ungroup() %>%
   dplyr::select(benchmark, transformation, family, dataset, replicate, pca_dim, alpha, knn, overlap) %>%
-  write_tsv("../output/suppl-raw_benchmark_results_source_data.tsv")
+  write_csv("../output/suppl-raw_benchmark_results_source_data.csv")
 ```
 
 

@@ -86,7 +86,7 @@ plot_assemble(
 
 ```{r}
 res %>%
-  write_tsv("../output/suppl-stratified_performance_source_data.tsv")
+  write_csv("../output/suppl-stratified_performance_source_data.csv")
 ```
 
 
