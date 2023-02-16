@@ -7,7 +7,7 @@ This repository contains the code to generate the figures of our paper 'Comparis
 
 The accompanying R package `transformGamPoi` is available via [Bioconductor](https://bioconductor.org/packages/transformGamPoi/) or at https://github.com/const-ae/transformGamPoi. 
 
-At https://shiny-portal.embl.de/shinyapps/app/08_single-cell_transformation_benchmark, we provide an interactive website to explore the benchmark results. The underlying source code is available at https://git.embl.de/ahlmanne/transformGamPoi-ShinyApp.
+At https://shiny-portal.embl.de/shinyapps/app/08_single-cell_transformation_benchmark, we provide an interactive website to explore the benchmark results. The underlying source code is available at https://github.com/const-ae/transformGamPoi-ShinyApp.
 
 
 # Repository content
