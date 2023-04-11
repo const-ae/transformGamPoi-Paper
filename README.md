@@ -3,7 +3,7 @@
 [![DOI](https://zenodo.org/badge/378103949.svg)](https://zenodo.org/badge/latestdoi/378103949)
 
 
-This repository contains the code to generate the figures of our paper 'Comparison of Transformations for Single-Cell RNA-Seq Data' on bioRxiv https://www.biorxiv.org/content/10.1101/2021.06.24.449781. 
+This repository contains the code to generate the figures of our paper 'Comparison of Transformations for Single-Cell RNA-Seq Data' in Nature Methods https://www.nature.com/articles/s41592-023-01814-1. 
 
 The accompanying R package `transformGamPoi` is available via [Bioconductor](https://bioconductor.org/packages/transformGamPoi/) or at https://github.com/const-ae/transformGamPoi. 
 
