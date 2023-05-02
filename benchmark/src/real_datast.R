@@ -1,8 +1,9 @@
 source("src/transformations/transformation_helper.R")
-file = readRDS("realdataset,rds") #require both count matrix and size factor vector
+file = readRDS("realdataset.rds") #require both count matrix and size factor vector
 
 UMI = file@assays$data$counts
 sf = file$total_counts
+sf = sf / mean(sf)
 alpha = 0.05
 
 
@@ -40,3 +41,5 @@ saveRDS(out, "real_output/logp1.rds")
 
 out = logp_cpm_fnc(UMI, sf, alpha)
 saveRDS(out, "real_output/logp_cpm.rds")
+
+# can be used in further downstream analysis.
