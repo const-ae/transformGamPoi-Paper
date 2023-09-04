@@ -20,7 +20,7 @@ set.seed(1)
 
 ```{r}
 if(! file.exists("../extra_data//svensson_2017_1.h5ad")){
-  download.file("https://data.caltech.edu/tindfiles/serve/3f89d3a5-6ceb-486e-95d4-9bd3f511a706/", "../extra_data/svensson_2017_1.h5ad")
+  download.file("https://data.caltech.edu/records/6fy1w-dgm81/files/Svensson%20et%20al%202017%20(1).h5ad?download=1", "../extra_data/svensson_2017_1.h5ad")
 }
 se <- zellkonverter::readH5AD("../extra_data/svensson_2017_1.h5ad", reader = "R")
 se <- se[,sample.int(ncol(se), 400)]
